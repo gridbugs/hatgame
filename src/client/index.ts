@@ -1,6 +1,6 @@
-import io from 'socket.io-client';
+// import io from 'socket.io-client';
 import player from '../common/player';
 
-let p = new player.Player("bar");
+const p = new player.Player('bar');
 
 console.log(p);

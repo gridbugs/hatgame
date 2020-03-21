@@ -17,6 +17,11 @@ module.exports = (env, argv) => {
             configFile: "tsconfig.client.json",
           },
         },
+        {
+          test: /\.tsx?$/,
+          exclude: /node_modules/,
+          loader: 'eslint-loader',
+        }
       ],
     },
     resolve: {
