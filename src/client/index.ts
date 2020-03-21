@@ -1,3 +1,6 @@
-import Player from '../common/player';
+import io from 'socket.io-client';
+import player from '../common/player';
 
-console.log(JSON.stringify(new Player("bar")));
+let p = new player.Player("bar");
+
+console.log(p);

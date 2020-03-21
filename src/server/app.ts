@@ -1,7 +1,8 @@
-import Player from '../common/player';
 import express from 'express';
 import http from 'http';
 import path from 'path';
+import io  from 'socket.io';
+import player from '../common/player';
 
 function getPort(): number {
   const port = process.env.PORT;
