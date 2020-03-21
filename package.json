@@ -1,7 +1,7 @@
 {
-  "name": "another-webapp-starting-point",
+  "name": "hatgame",
   "version": "1.0.0",
-  "description": "Boilerplate for webapp with client and server written in typescript",
+  "description": "",
   "scripts": {
     "build:server": "webpack --config webpack.config.server.js --mode production",
     "build:client": "webpack --config webpack.config.client.js --mode production",

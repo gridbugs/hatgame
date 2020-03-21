@@ -1,4 +1,2 @@
-# Another Webapp Starting Point
+# Hat Game
 
-Client and server logic is written in typescript, with some common code
-shared by both the client and server.
