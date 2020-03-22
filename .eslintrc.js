@@ -22,6 +22,11 @@ module.exports = {
   rules: {
     'import/no-unresolved': 'off',
     'import/extensions': 'off',
-    'no-unused-vars': ['error', { 'varsIgnorePattern': '_.*' }],
+    'no-unused-vars': ['error', {
+      args: 'all',
+      varsIgnorePattern: '(_.*|preactH)',
+      argsIgnorePattern: '_.*',
+    }],
+    'no-underscore-dangle': 'off',
   },
 };

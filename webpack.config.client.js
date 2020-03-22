@@ -4,7 +4,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 module.exports = (env, argv) => {
   return {
     entry: {
-      main: path.resolve('.', 'src', 'client', 'index.ts'),
+      main: path.resolve('.', 'src', 'client', 'index.tsx'),
     },
     devtool: argv.mode === 'production' ? 'false' : 'inline-source-map',
     module: {

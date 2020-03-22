@@ -1,7 +1,7 @@
 import express from 'express';
 import http from 'http';
 import path from 'path';
-import _io from 'socket.io';
+import socketIo from 'socket.io';
 import _player from '../common/player';
 
 function getPort(): number {
@@ -15,13 +15,22 @@ function getPort(): number {
 const app = express();
 const server = http.createServer(app);
 const port = getPort();
+const io = socketIo(server);
 
-app.get('/', (req: express.Request, res: express.Response) => {
+app.get('/', (_req, res) => {
   res.sendFile(path.resolve(__dirname, 'index.html'));
 });
 
-app.get('/bundle.js', (req: express.Request, res: express.Response) => {
+app.get('/bundle.js', (_req, res) => {
   res.sendFile(path.resolve(__dirname, 'bundle.js'));
+});
+
+io.on('connection', (socket) => {
+  console.log('a user connected');
+  socket.on('foo', (msg: any) => {
+    console.log('got an event', msg);
+    socket.emit('bar', { beep: 'boop' });
+  });
 });
 
 server.listen(port, () => {

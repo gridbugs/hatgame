@@ -5,6 +5,7 @@
   "scripts": {
     "build:server": "webpack --config webpack.config.server.js --mode production",
     "build:client": "webpack --config webpack.config.client.js --mode production",
+    "watch:server": "webpack --config webpack.config.server.js --mode development --watch",
     "watch:client": "webpack --config webpack.config.client.js --mode development --watch",
     "build": "npm run build:client && npm run build:server",
     "serve": "npm run build:server && node ./dist/app.js",
@@ -23,7 +24,8 @@
     "ts-loader": "^6.2.1",
     "typescript": "^3.8.3",
     "webpack": "^4.42.0",
-    "webpack-cli": "^3.3.11"
+    "webpack-cli": "^3.3.11",
+    "webpack-node-externals": "^1.7.2"
   },
   "dependencies": {
     "@types/express": "^4.17.3",
@@ -31,6 +33,7 @@
     "@types/socket.io": "^2.1.4",
     "@types/socket.io-client": "^1.4.32",
     "express": "^4.17.1",
+    "preact": "^10.3.4",
     "socket.io": "^2.3.0",
     "socket.io-client": "^2.3.0"
   }
