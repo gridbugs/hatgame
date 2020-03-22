@@ -3,15 +3,25 @@ import io from 'socket.io-client';
 import { h as preactH, render } from 'preact';
 import Chat from './chat';
 
-const socket = io(window.location.pathname);
-
-const container = document.getElementById('container');
-if (container !== null) {
-  render(<div><Chat /></div>, container);
+function connect(): SocketIOClient.Socket | null {
+  const matches = window.location.pathname.match('(/[a-zA-Z0-9-_ ]+)');
+  if (matches === null) {
+    return null;
+  }
+  const channel = matches[1];
+  if (channel === undefined) {
+    return null;
+  }
+  return io(channel);
 }
 
-socket.emit('foo', { hello: 'world' });
+const container = document.getElementById('container');
+const socket = connect();
 
-socket.on('bar', (msg: any) => {
-  console.log(msg);
-});
+if (container !== null) {
+  if (socket === null) {
+    render(<p>Unable to connect to server!</p>, container);
+  } else {
+    render(<div><Chat socket={socket}/></div>, container);
+  }
+}

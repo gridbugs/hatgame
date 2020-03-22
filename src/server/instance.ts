@@ -8,7 +8,13 @@ export default class Instance {
     this.game = new GameInstance();
     this.socketNamespace.on('connection', (socket) => {
       if (socket.handshake.session !== undefined) {
-        console.log(this.socketNamespace.name, 'a user connected', socket.handshake.session.uuid);
+        console.log(`[${this.socketNamespace.name}] new connection from ${socket.handshake.session.uuid}`);
+        socket.on('message', (message) => {
+          if (socket.handshake.session !== undefined) {
+            console.log(`[${this.socketNamespace.name}] message from ${socket.handshake.session.uuid}: ${message}`);
+            this.socketNamespace.emit('message', message);
+          }
+        });
       }
     });
   }

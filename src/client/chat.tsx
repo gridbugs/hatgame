@@ -1,21 +1,72 @@
 /** @jsx preactH */
-import { h as preactH, Component, ComponentChild } from 'preact';
+import { h as preactH, Component, ComponentChild, } from 'preact';
+
+interface Props {
+  socket: SocketIOClient.Socket;
+}
 
 interface State {
   messages: string[];
+  inputValue: string;
 }
 
-export default class Chat extends Component<{}, State> {
-  constructor() {
-    super();
-    this.state = { messages: [] };
+type InputChangeEvent = preactH.JSX.TargetedEvent<HTMLInputElement, Event>;
+type InputKeyPressEvent = preactH.JSX.TargetedEvent<HTMLInputElement, KeyboardEvent>;
+
+export default class Chat extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      messages: [],
+      inputValue: '',
+    };
   }
 
-  public render(): ComponentChild {
-    return <div>
-    {
-      this.state.messages.map((message, index) => <div key={index}>{message}</div>)
+  componentDidMount(): void {
+    this.props.socket.on('message', (message: any) => {
+      if (typeof message === 'string') {
+        this.setState({
+          messages: [...this.state.messages, message],
+        });
+      }
+    });
+  }
+
+  inputOnKeyPress(event: InputKeyPressEvent): void {
+    if (event.key === 'Enter') {
+      this.sendInputValue();
     }
+  }
+
+  updateInputValue(event: InputChangeEvent): void {
+    this.setState({
+      inputValue: event.currentTarget.value,
+    });
+  }
+
+  sendInputValue(): void {
+    if (this.state.inputValue !== '') {
+      this.props.socket.emit('message', this.state.inputValue);
+      this.setState({
+        inputValue: '',
+      });
+    }
+  }
+
+  render(): ComponentChild {
+    return <div>
+      <div>
+        {
+          this.state.messages.map((message, index) => <div key={index}>{message}</div>)
+        }
+      </div>
+      <input
+        value={this.state.inputValue}
+        onInput={(event: InputChangeEvent) => this.updateInputValue(event)}
+        onKeyPress={(event: InputKeyPressEvent) => this.inputOnKeyPress(event)}
+      >
+      </input>
+      <input type='button' value='Send!' onClick={() => this.sendInputValue()}></input>
     </div>;
   }
 }

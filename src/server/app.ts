@@ -41,6 +41,10 @@ app.get('**/bundle.js', (_req, res) => {
   res.sendFile(path.resolve(__dirname, 'bundle.js'));
 });
 
+app.get('/', (_req, res) => {
+  res.send('hello');
+});
+
 app.get('*', (req, res) => {
   if (req.session !== undefined) {
     if (req.session.uuid === undefined) {

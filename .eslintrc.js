@@ -33,5 +33,11 @@ module.exports = {
     }],
     'no-underscore-dangle': 'off',
     'spaced-comment': 'off',
+    'class-methods-use-this': 'off',
+    'comma-dangle': 'off',
+    '@typescript-eslint/explicit-function-return-type': ['error', {
+      allowExpressions: true,
+    }],
+    '@typescript-eslint/no-explicit-any': 'off',
   },
 };
