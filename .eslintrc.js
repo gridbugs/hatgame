@@ -6,6 +6,10 @@ module.exports = {
   },
   extends: [
     'airbnb-base',
+    'eslint:recommended',
+    'plugin:@typescript-eslint/eslint-recommended',
+    'plugin:@typescript-eslint/recommended',
+    "plugin:react/recommended",
   ],
   globals: {
     Atomics: 'readonly',
@@ -22,11 +26,12 @@ module.exports = {
   rules: {
     'import/no-unresolved': 'off',
     'import/extensions': 'off',
-    'no-unused-vars': ['error', {
+    '@typescript-eslint/no-unused-vars': ['error', {
       args: 'all',
       varsIgnorePattern: '(_.*|preactH)',
       argsIgnorePattern: '_.*',
     }],
     'no-underscore-dangle': 'off',
+    'spaced-comment': 'off',
   },
 };

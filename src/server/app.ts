@@ -15,47 +15,40 @@ function getPort(): number {
   return 8080;
 }
 
+const _fo = 1;
 const app = express();
 const server = http.createServer(app);
 const port = getPort();
 const io = socketIo(server);
-const _state = new AppState();
 const session = expressSession({
   secret: 'lid mouse license wallet',
   resave: false,
   saveUninitialized: true,
 });
+const socketSession = sharedSession(session, { autoSave: true });
+
+const appState = new AppState(io, socketSession);
 
 app.use(session);
 
 io.use(sharedSession(session, { autoSave: true }));
 
-app.get('/', (_req, res) => {
-  res.sendFile(path.resolve(__dirname, 'index.html'));
+app.get('/favicon.ico', (_req, _res) => {
+  // ignore request for favicon
 });
 
 app.get('**/bundle.js', (_req, res) => {
   res.sendFile(path.resolve(__dirname, 'bundle.js'));
 });
 
-app.get('/*', (req, res) => {
+app.get('*', (req, res) => {
   if (req.session !== undefined) {
     if (req.session.uuid === undefined) {
       req.session.uuid = uuid();
     }
-    console.log(req.session.uuid);
+    appState.ensureInstanceExists(req.url);
   }
   res.sendFile(path.resolve(__dirname, 'index.html'));
-});
-
-io.on('connection', (socket) => {
-  if (socket.handshake.session !== undefined) {
-    console.log('a user connected', socket.handshake.session.uuid);
-  }
-  socket.on('foo', (msg: any) => {
-    console.log('got an event', msg);
-    socket.broadcast.emit('bar', { beep: 'boop' });
-  });
 });
 
 server.listen(port, () => {
