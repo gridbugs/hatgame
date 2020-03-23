@@ -1,12 +1,13 @@
 /** @jsx preactH */
 import { h as preactH, Component, ComponentChild, } from 'preact';
+import { Message, isMessage } from '../common/message';
 
 interface Props {
   socket: SocketIOClient.Socket;
 }
 
 interface State {
-  messages: string[];
+  messages: Message[];
   inputValue: string;
 }
 
@@ -28,7 +29,7 @@ export default class Chat extends Component<Props, State> {
 
   componentDidMount(): void {
     this.props.socket.on('message', (message: any) => {
-      if (typeof message === 'string') {
+      if (isMessage(message)) {
         this.setState({
           messages: [...this.state.messages, message],
         });
@@ -62,7 +63,9 @@ export default class Chat extends Component<Props, State> {
       <h1>{nspToheading(this.props.socket.nsp)}</h1>
       <div>
         {
-          this.state.messages.map((message, index) => <div key={index}>{message}</div>)
+          this.state.messages.map(
+            (message, index) => <div key={index}>{message.userUuid}: {message.text}</div>
+          )
         }
       </div>
       <input

@@ -9,10 +9,18 @@ export default class Instance {
     this.socketNamespace.on('connection', (socket) => {
       if (socket.handshake.session !== undefined) {
         console.log(`[${this.socketNamespace.name}] new connection from ${socket.handshake.session.uuid}`);
-        socket.on('message', (message) => {
+        socket.on('message', (text) => {
           if (socket.handshake.session !== undefined) {
-            console.log(`[${this.socketNamespace.name}] message from ${socket.handshake.session.uuid}: ${message}`);
-            this.socketNamespace.emit('message', message);
+            const { handshake: { session: { uuid } } } = socket;
+            console.log(uuid);
+            if (typeof uuid === 'string' && typeof text === 'string') {
+              const message = {
+                userUuid: uuid,
+                text,
+              };
+              console.log(`[${this.socketNamespace.name}] message from ${uuid}: ${text}`);
+              this.socketNamespace.emit('message', message);
+            }
           }
         });
       }
