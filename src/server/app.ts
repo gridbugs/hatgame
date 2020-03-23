@@ -42,7 +42,7 @@ app.get('**/bundle.js', (_req, res) => {
 });
 
 app.get('/', (_req, res) => {
-  res.send('hello');
+  res.sendFile(path.resolve(__dirname, 'index.html'));
 });
 
 app.get('*', (req, res) => {
@@ -52,7 +52,7 @@ app.get('*', (req, res) => {
     }
     appState.ensureInstanceExists(req.url);
   }
-  res.sendFile(path.resolve(__dirname, 'index.html'));
+  res.sendFile(path.resolve(__dirname, 'game.html'));
 });
 
 server.listen(port, () => {

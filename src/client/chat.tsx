@@ -10,6 +10,10 @@ interface State {
   inputValue: string;
 }
 
+function nspToheading(nsp: string): string {
+  return nsp.replace(/^\//, '');
+}
+
 type InputChangeEvent = preactH.JSX.TargetedEvent<HTMLInputElement, Event>;
 type InputKeyPressEvent = preactH.JSX.TargetedEvent<HTMLInputElement, KeyboardEvent>;
 
@@ -55,6 +59,7 @@ export default class Chat extends Component<Props, State> {
 
   render(): ComponentChild {
     return <div>
+      <h1>{nspToheading(this.props.socket.nsp)}</h1>
       <div>
         {
           this.state.messages.map((message, index) => <div key={index}>{message}</div>)

@@ -29,7 +29,12 @@ module.exports = (env, argv) => {
     },
     plugins: [
       new HtmlWebpackPlugin({
-        template: './static/index.html'
+        template: './static/index.html',
+        filename: 'index.html',
+      }),
+      new HtmlWebpackPlugin({
+        template: './static/game.html',
+        filename: 'game.html',
       }),
     ],
     output: {

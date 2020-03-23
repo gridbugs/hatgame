@@ -4,7 +4,7 @@ import { h as preactH, render } from 'preact';
 import Chat from './chat';
 
 function connect(): SocketIOClient.Socket | null {
-  const matches = window.location.pathname.match('(/[a-zA-Z0-9-_ ]+)');
+  const matches = window.location.pathname.match(/(\/[a-zA-Z0-9-_ \/]+)/);
   if (matches === null) {
     return null;
   }
@@ -12,6 +12,7 @@ function connect(): SocketIOClient.Socket | null {
   if (channel === undefined) {
     return null;
   }
+  console.log(channel);
   return io(channel);
 }
 

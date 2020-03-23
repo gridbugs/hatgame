@@ -1,3 +1,19 @@
 <title>Hat Game</title>
 <h1>Hat Game</h1>
-<div id="container"></div>
+<input id='room' placeholder='room'></input>
+<input id='join' type='button' value='Join!'></input>
+<script type='text/javascript'>
+const room = document.getElementById('room');
+const join = document.getElementById('join');
+function go() {
+  if (room.value !== '') {
+    window.location.href = room.value;
+  }
+}
+join.addEventListener('click', go);
+room.addEventListener('keypress', (event) => {
+  if (event.key === 'Enter') {
+    go();
+  }
+});
+</script>
