@@ -1,5 +1,4 @@
 /** @jsx preactH */
-import { Map } from 'immutable';
 import io from 'socket.io-client';
 import { h as preactH, render } from 'preact';
 import Chat from './chat';
@@ -27,8 +26,3 @@ if (container !== null) {
     render(<div><Chat socket={socket}/></div>, container);
   }
 }
-
-const x = Map();
-const y = x.set({ uuid: 'foo' }, 'world');
-console.log(y.get({ uuid: 'foo' }));
-console.log(y);

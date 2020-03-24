@@ -1,14 +1,18 @@
 /** @jsx preactH */
 import { h as preactH, Component, ComponentChild, } from 'preact';
-import { Message, isMessage } from '../common/message';
-import { State as _ } from '../common/state';
+import {
+  State as RoomState,
+  EMPTY_STATE,
+  isUpdate,
+  updateState,
+} from '../common/state';
 
 interface Props {
   socket: SocketIOClient.Socket;
 }
 
 interface State {
-  messages: Message[];
+  roomState: RoomState;
   inputValue: string;
 }
 
@@ -23,16 +27,17 @@ export default class Chat extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = {
-      messages: [],
+      roomState: EMPTY_STATE,
       inputValue: '',
     };
   }
 
   componentDidMount(): void {
-    this.props.socket.on('message', (message: any) => {
-      if (isMessage(message)) {
+    this.props.socket.on('messageServerToClient', (update: any) => {
+      console.log(update);
+      if (isUpdate(update)) {
         this.setState({
-          messages: [...this.state.messages, message],
+          roomState: updateState(this.state.roomState, update),
         });
       }
     });
@@ -52,7 +57,7 @@ export default class Chat extends Component<Props, State> {
 
   sendInputValue(): void {
     if (this.state.inputValue !== '') {
-      this.props.socket.emit('message', this.state.inputValue);
+      this.props.socket.emit('messageClientToServer', this.state.inputValue);
       this.setState({
         inputValue: '',
       });
@@ -64,9 +69,9 @@ export default class Chat extends Component<Props, State> {
       <h1>{nspToheading(this.props.socket.nsp)}</h1>
       <div>
         {
-          this.state.messages.map(
-            (message, index) => <div key={index}>{message.userUuid}: {message.text}</div>
-          )
+          this.state.roomState.chatMessages.map(
+            (message, index) => <div key={index}>{message.userUuid}: {message.messageText}</div>
+          ).toJS()
         }
       </div>
       <input

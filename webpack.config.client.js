@@ -10,6 +10,12 @@ module.exports = (env, argv) => {
     module: {
       rules: [
         {
+          enforce: 'pre',
+          test: /\.tsx?$/,
+          exclude: [ /node_modules/ ],
+          loader: 'eslint-loader',
+        },
+        {
           test: /\.tsx?$/,
           exclude: [ /node_modules/ ],
           loader: 'ts-loader',
@@ -17,11 +23,6 @@ module.exports = (env, argv) => {
             configFile: "tsconfig.client.json",
           },
         },
-        {
-          test: /\.tsx?$/,
-          exclude: /node_modules/,
-          loader: 'eslint-loader',
-        }
       ],
     },
     resolve: {
