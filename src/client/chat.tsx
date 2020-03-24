@@ -1,6 +1,7 @@
 /** @jsx preactH */
 import { h as preactH, Component, ComponentChild, } from 'preact';
 import { Message, isMessage } from '../common/message';
+import { State as _ } from '../common/state';
 
 interface Props {
   socket: SocketIOClient.Socket;
