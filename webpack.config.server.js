@@ -19,7 +19,7 @@ module.exports = (env, argv) => {
           exclude: [ /node_modules/ ],
           loader: 'ts-loader',
           options: {
-            configFile: "tsconfig.server.json",
+            configFile: 'tsconfig.server.json',
           },
         },
         {

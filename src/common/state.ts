@@ -1,4 +1,7 @@
 import { Map, List } from 'immutable';
+import { UserUuid, isUserUuid } from './user_uuid';
+
+export { UserUuid, isUserUuid };
 
 export interface StateJS {
   userNicknames: Record<string, any>;
@@ -18,18 +21,16 @@ export function stateJSToState(state: StateJS): State {
     chatMessages: List(chatMessages),
   };
 }
-
-type UserUuid = string;
-export function isUserUuid(obj: any): obj is UserUuid {
-  return typeof obj === 'string';
+export function isStateJS(obj: any): obj is StateJS {
+  return typeof obj.userNicknames === 'object' && typeof obj.chatMessages === 'object';
 }
 
-type Nickname = string;
+export type Nickname = string;
 export function isNickname(obj: any): obj is Nickname {
   return typeof obj === 'string';
 }
 
-type MessageText = string;
+export type MessageText = string;
 export function isMessageText(obj: any): obj is MessageText {
   return typeof obj === 'string';
 }
@@ -65,6 +66,9 @@ export interface SetNickname {
 export function isSetNickname(obj: any): obj is SetNickname {
   return obj.label === SET_NICKNAME && isUserUuid(obj.userUuid) && isNickname(obj.nickname);
 }
+export function newSetNickname(userUuid: UserUuid, nickname: Nickname): SetNickname {
+  return { label: SET_NICKNAME, userUuid, nickname };
+}
 
 export type ReplaceStateLabel = 'ReplaceState';
 const REPLACE_STATE_LABEL: ReplaceStateLabel = 'ReplaceState';
@@ -73,7 +77,7 @@ export interface ReplaceState {
   readonly state: StateJS;
 }
 export function isReplaceState(obj: any): obj is ReplaceState {
-  return obj.label === REPLACE_STATE_LABEL;
+  return obj.label === REPLACE_STATE_LABEL && isStateJS(obj.state);
 }
 export function newReplaceState(state: State): ReplaceState {
   return { label: REPLACE_STATE_LABEL, state: stateToStateJS(state) };

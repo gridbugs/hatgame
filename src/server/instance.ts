@@ -1,13 +1,16 @@
+import { List } from 'immutable';
 import socketIo from 'socket.io';
 import GameInstance from '../common/game_instance';
 import {
   State as RoomState,
   EMPTY_STATE,
   newAddChatMessage,
-  isUserUuid,
-  isMessageText,
+  UserUuid,
+  MessageText,
   updateState,
   newReplaceState,
+  newSetNickname,
+  Nickname,
 } from '../common/state';
 
 export default class Instance {
@@ -21,19 +24,27 @@ export default class Instance {
     this.socketNamespace.on('connection', (socket) => {
       socket.emit('messageServerToClient', newReplaceState(this.roomState));
       if (socket.handshake.session !== undefined) {
-        console.log(`[${this.socketNamespace.name}] new connection from ${socket.handshake.session.uuid}`);
-        socket.on('messageClientToServer', (text) => {
-          if (socket.handshake.session !== undefined) {
-            const { handshake: { session: { uuid } } } = socket;
-            if (isUserUuid(uuid) && isMessageText(text)) {
-              const addChatMessage = newAddChatMessage(uuid, text);
-              this.roomState = updateState(this.roomState, addChatMessage);
-              console.log(`[${this.socketNamespace.name}] message from ${uuid}: ${text}`);
-              this.socketNamespace.emit('messageServerToClient', addChatMessage);
-            }
-          }
-        });
+        console.log(
+          `[${this.socketNamespace.name}] new connection from ${socket.handshake.session.uuid}`
+        );
       }
     });
+  }
+
+  sendMessage(userUuid: UserUuid, messageText: MessageText): void {
+    const addChatMessage = newAddChatMessage(userUuid, messageText);
+    this.roomState = updateState(this.roomState, addChatMessage);
+    this.socketNamespace.emit('messageServerToClient', addChatMessage);
+  }
+
+  setNickname(userUuid: UserUuid, nickname: Nickname): boolean {
+    const allNicknames = List(this.roomState.userNicknames.values());
+    if (allNicknames.contains(nickname)) {
+      return false;
+    }
+    const setNickname = newSetNickname(userUuid, nickname);
+    this.roomState = updateState(this.roomState, setNickname);
+    this.socketNamespace.emit('messageServerToClient', setNickname);
+    return true;
   }
 }

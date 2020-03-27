@@ -4,8 +4,9 @@ import express from 'express';
 import expressSession from 'express-session';
 import sharedSession from 'express-socket.io-session';
 import socketIo from 'socket.io';
-import { v4 as uuid } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 import AppState from './app_state';
+import * as api from '../common/api';
 
 function getPort(): number {
   const port = process.env.PORT;
@@ -33,28 +34,70 @@ app.use(session);
 
 io.use(sharedSession(session, { autoSave: true }));
 
+app.use('/static', express.static(__dirname));
+
 app.get('/favicon.ico', (_req, _res) => {
   // ignore request for favicon
-});
-
-app.get('**/bundle.js', (_req, res) => {
-  res.sendFile(path.resolve(__dirname, 'bundle.js'));
 });
 
 app.get('/', (_req, res) => {
   res.sendFile(path.resolve(__dirname, 'index.html'));
 });
 
-app.get('*', (req, res) => {
-  if (req.session !== undefined) {
-    if (req.session.uuid === undefined) {
-      req.session.uuid = uuid();
-    }
-    appState.ensureInstanceExists(req.url);
-  }
+app.get('/room/:room', (_req, res) => {
   res.sendFile(path.resolve(__dirname, 'game.html'));
 });
 
 server.listen(port, () => {
   console.log(`Listening on port ${port}`);
+});
+
+app.get('/api/hello/:room', (req, res) => {
+  if (req.session !== undefined) {
+    let uuid: string;
+    if (req.session.uuid === undefined) {
+      uuid = uuidv4();
+      req.session.uuid = uuid;
+    } else {
+      uuid = req.session.uuid;
+    }
+    const { params: { room } } = req;
+    appState.ensureInstanceExists(room);
+    res.send(api.newHello(uuid));
+  }
+});
+
+app.get('/api/message/:room/:text', (req, res) => {
+  if (req.session !== undefined) {
+    if (req.session.uuid !== undefined) {
+      const { params: { room, text } } = req;
+      const instance = appState.getInstance(room);
+      if (instance === null) {
+        res.send(api.newResult(false));
+        return;
+      }
+      instance.sendMessage(req.session.uuid, text);
+      console.log(req.session.uuid, room, text);
+      res.send(api.newResult(true));
+    }
+  }
+});
+
+app.get('/api/setnickname/:room/:nickname', (req, res) => {
+  if (req.session !== undefined) {
+    if (req.session.uuid !== undefined) {
+      const { params: { room, nickname } } = req;
+      const instance = appState.getInstance(room);
+      if (instance === null) {
+        res.send(api.newResult(false));
+        return;
+      }
+      if (!instance.setNickname(req.session.uuid, nickname)) {
+        res.send(api.newResult(false));
+        return;
+      }
+      console.log(req.session.uuid, room, nickname);
+      res.send(api.newResult(true));
+    }
+  }
 });

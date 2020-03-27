@@ -39,5 +39,6 @@ module.exports = {
       allowExpressions: true,
     }],
     '@typescript-eslint/no-explicit-any': 'off',
+    'max-classes-per-file': 'off',
   },
 };

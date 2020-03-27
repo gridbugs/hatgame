@@ -4,7 +4,8 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 module.exports = (env, argv) => {
   return {
     entry: {
-      main: path.resolve('.', 'src', 'client', 'index.tsx'),
+      game: path.resolve('.', 'src', 'client', 'game.tsx'),
+      index: path.resolve('.', 'src', 'client', 'index.ts'),
     },
     devtool: argv.mode === 'production' ? 'false' : 'inline-source-map',
     module: {
@@ -20,7 +21,7 @@ module.exports = (env, argv) => {
           exclude: [ /node_modules/ ],
           loader: 'ts-loader',
           options: {
-            configFile: "tsconfig.client.json",
+            configFile: 'tsconfig.client.json',
           },
         },
       ],
@@ -32,15 +33,18 @@ module.exports = (env, argv) => {
       new HtmlWebpackPlugin({
         template: './static/index.html',
         filename: 'index.html',
+        chunks: ['index'],
       }),
       new HtmlWebpackPlugin({
         template: './static/game.html',
         filename: 'game.html',
+        chunks: [ 'game' ],
       }),
     ],
     output: {
       path: path.resolve(__dirname, 'dist'),
-      filename: 'bundle.js',
+      publicPath: '/static/',
+      filename: 'bundle.[name].js',
     },
   }
 }

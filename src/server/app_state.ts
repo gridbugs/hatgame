@@ -19,4 +19,12 @@ export default class AppState {
       this.instances.set(name, instance);
     }
   }
+
+  getInstance(name: string): Instance | null {
+    const instance = this.instances.get(name);
+    if (instance === undefined) {
+      return null;
+    }
+    return instance;
+  }
 }
