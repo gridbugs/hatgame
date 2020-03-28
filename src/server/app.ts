@@ -31,22 +31,21 @@ function sessionStore(): expressSession.Store | expressSession.MemoryStore {
     console.log('Using MemoryStore for session storage!');
     return new expressSession.MemoryStore();
   }
-  let pool;
+  const PgSession = connectPgSimple(expressSession);
+  const tableName = 'session';
+  let store;
   if (typeof process.env.DATABASE_URL === 'string') {
-    pool = new pg.Pool({
-      database: process.env.DATABASE_URL,
-    });
+    const conString = process.env.DATABASE_URL;
+    console.log('conString', conString);
+    store = new PgSession({ conString, tableName });
   } else {
-    pool = new pg.Pool({
+    console.log('connecting to local postgres');
+    const pool = new pg.Pool({
       host: 'localhost',
       database: 'hatgame',
     });
+    store = new PgSession({ pool, tableName });
   }
-  const PgSession = connectPgSimple(expressSession);
-  const store = new PgSession({
-    pool,
-    tableName: 'session',
-  });
   store.pruneSessions((err) => {
     if (err !== undefined) {
       throw new Error(JSON.stringify(err));
