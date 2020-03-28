@@ -31,10 +31,17 @@ function sessionStore(): expressSession.Store | expressSession.MemoryStore {
     console.log('Using MemoryStore for session storage!');
     return new expressSession.MemoryStore();
   }
-  const pool = new pg.Pool({
-    host: 'localhost',
-    database: 'hatgame',
-  });
+  let pool;
+  if (typeof process.env.DATABASE_URL === 'string') {
+    pool = new pg.Pool({
+      database: process.env.DATABASE_URL,
+    });
+  } else {
+    pool = new pg.Pool({
+      host: 'localhost',
+      database: 'hatgame',
+    });
+  }
   const PgSession = connectPgSimple(expressSession);
   const store = new PgSession({
     pool,
