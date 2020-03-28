@@ -23,6 +23,11 @@ module.exports = {
   plugins: [
     '@typescript-eslint',
   ],
+  settings: {
+    react: {
+      version: 'detect',
+    },
+  },
   rules: {
     'import/no-unresolved': 'off',
     'import/extensions': 'off',
