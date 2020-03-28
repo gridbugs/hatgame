@@ -22,7 +22,7 @@ export default class Instance {
     this.game = new GameInstance();
     this.roomState = EMPTY_STATE;
     this.socketNamespace.on('connection', (socket) => {
-      if (socket.handshake.session !== undefined && typeof socket.handshake.session.uuid === 'string' ) {
+      if (socket.handshake.session !== undefined && typeof socket.handshake.session.uuid === 'string') {
         console.log(
           `[${this.socketNamespace.name}] new connection from ${socket.handshake.session.uuid}`
         );
