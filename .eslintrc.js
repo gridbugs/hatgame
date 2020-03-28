@@ -25,7 +25,7 @@ module.exports = {
   ],
   settings: {
     react: {
-      version: 'detect',
+      version: '16',
     },
   },
   rules: {
@@ -45,5 +45,6 @@ module.exports = {
     }],
     '@typescript-eslint/no-explicit-any': 'off',
     'max-classes-per-file': 'off',
+    'no-console': 'off',
   },
 };

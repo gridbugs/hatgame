@@ -4,6 +4,8 @@ import express from 'express';
 import expressSession from 'express-session';
 import sharedSession from 'express-socket.io-session';
 import socketIo from 'socket.io';
+import connectPgSimple from 'connect-pg-simple';
+import pg from 'pg';
 import { v4 as uuidv4 } from 'uuid';
 import AppState from './app_state';
 import * as api from '../common/api';
@@ -16,12 +18,42 @@ function getPort(): number {
   return 8080;
 }
 
-const _fo = 1;
+function isDevelopment(): boolean {
+  const dev = process.env.DEV;
+  if (dev !== undefined) {
+    return true;
+  }
+  return false;
+}
+
+function sessionStore(): expressSession.Store | expressSession.MemoryStore {
+  if (isDevelopment()) {
+    console.log('Using MemoryStore for session storage!');
+    return new expressSession.MemoryStore();
+  }
+  const pool = new pg.Pool({
+    host: 'localhost',
+    database: 'hatgame',
+  });
+  const PgSession = connectPgSimple(expressSession);
+  const store = new PgSession({
+    pool,
+    tableName: 'session',
+  });
+  store.pruneSessions((err) => {
+    if (err !== undefined) {
+      throw new Error(JSON.stringify(err));
+    }
+  });
+  return store;
+}
+
 const app = express();
 const server = http.createServer(app);
 const port = getPort();
 const io = socketIo(server);
 const session = expressSession({
+  store: sessionStore(),
   secret: 'lid mouse license wallet',
   resave: false,
   saveUninitialized: true,
