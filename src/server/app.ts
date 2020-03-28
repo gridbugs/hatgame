@@ -63,6 +63,7 @@ const session = expressSession({
   secret: 'lid mouse license wallet',
   resave: false,
   saveUninitialized: true,
+  cookie: { maxAge: 24 * 60 * 60 * 1000 }, // 1 day
 });
 const socketSession = sharedSession(session, { autoSave: true });
 
