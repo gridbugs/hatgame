@@ -9,6 +9,7 @@ import {
   Nickname,
 } from '../common/state';
 import * as api from './api';
+import { MESSAGE_SERVER_TO_CLIENT } from '../common/socket_api';
 import { UserUuid } from '../common/user_uuid';
 
 interface NicknameProps {
@@ -91,13 +92,13 @@ export default class Chat extends Component<Props, State> {
     this.socket = io(`/${props.roomName}`);
   }
 
-  async componentDidMount(): Promise<void> {
-    this.socket.on('messageServerToClient', (update: any) => {
+  componentDidMount(): void {
+    this.socket.on(MESSAGE_SERVER_TO_CLIENT, (update: any) => {
       console.log(update);
       if (isUpdate(update)) {
-        const roomState = updateState(this.state.roomState, update);
-        this.setState({
-          roomState,
+        this.setState((prevState, _props) => {
+          const roomState = updateState(prevState.roomState, update);
+          return { roomState };
         });
       }
     });
@@ -132,21 +133,50 @@ export default class Chat extends Component<Props, State> {
     return this.state.roomState.userNicknames.get(userUuid, defaultNickname);
   }
 
-  getNicknameForChatdisplay(userUuid: UserUuid): Nickname {
+  getNicknameForChatDisplay(userUuid: UserUuid): Nickname {
     return this.getNicknameOr(userUuid, 'anonymous');
+  }
+
+  allUsersSortedByNickname(): { nickname: Nickname; userUuid: UserUuid }[] {
+    const users = this.state.roomState.userUuids.toJS().map(
+      (userUuid) => ({ nickname: this.getNicknameForChatDisplay(userUuid), userUuid })
+    );
+    users.sort((a, b) => {
+      if (a.nickname < b.nickname) {
+        return -1;
+      }
+      if (a.nickname > b.nickname) {
+        return 1;
+      }
+      return 0;
+    });
+    return users;
   }
 
   render(): ComponentChild {
     return <div>
       <h1>{nspToheading(this.socket.nsp)}</h1>
-      <div>
-        {
-          this.state.roomState.chatMessages.map(
-            (message, index) => <div key={index}><span style={ { fontWeight: 'bold' } }> {
-              this.getNicknameForChatdisplay(message.userUuid)
-              }</span>: {message.messageText}</div>
-          ).toJS()
-        }
+      <div style= { { display: 'flex' } }>
+        <div style={ { height: '20em', width: '60em', overflow: 'scroll' } }>
+          <div>
+            {
+              this.state.roomState.chatMessages.map(
+                (message, index) => <div key={index}><span style={ { fontWeight: 'bold' } }> {
+                  this.getNicknameForChatDisplay(message.userUuid)
+                  }</span>: {message.messageText}</div>
+              ).toJS()
+            }
+          </div>
+        </div>
+        <div style={ { height: '20em', width: '40em' } }>
+          {
+            this.allUsersSortedByNickname().map(
+              ({ userUuid, nickname }, index) => <div key={index}>
+                { nickname} ({ userUuid })
+              </div>
+            )
+          }
+        </div>
       </div>
       <div>
       <input
