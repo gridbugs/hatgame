@@ -1,5 +1,8 @@
 import { Map, List, Set } from 'immutable';
 import { UserUuid, isUserUuid } from './user_uuid';
+import { Nickname as foo } from './state-io';
+
+console.log(foo);
 
 export { UserUuid, isUserUuid };
 

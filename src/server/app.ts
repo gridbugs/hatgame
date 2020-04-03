@@ -26,10 +26,14 @@ function isDevelopment(): boolean {
   return false;
 }
 
+function memorySessionStore(): expressSession.MemoryStore {
+  console.log('Using MemoryStore for session storage!');
+  return new expressSession.MemoryStore();
+}
+
 function sessionStore(): expressSession.Store | expressSession.MemoryStore {
   if (isDevelopment()) {
-    console.log('Using MemoryStore for session storage!');
-    return new expressSession.MemoryStore();
+    return memorySessionStore();
   }
   const PgSession = connectPgSimple(expressSession);
   const tableName = 'session';

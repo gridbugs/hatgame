@@ -9,59 +9,10 @@ import {
   Nickname,
 } from '../common/state';
 import * as api from './api';
+import { InputChangeEvent, InputKeyPressEvent } from './event';
+import { NicknameComponent } from './nickname';
 import { MESSAGE_SERVER_TO_CLIENT } from '../common/socket_api';
 import { UserUuid } from '../common/user_uuid';
-
-interface NicknameProps {
-  roomName: string;
-  currentValue: string | null;
-}
-
-interface NicknameState {
-  editValue: string;
-}
-
-class NicknameComponent extends Component<NicknameProps, NicknameState> {
-  constructor(props: NicknameProps) {
-    super(props);
-    this.state = {
-      editValue: props.currentValue === null ? '' : props.currentValue,
-    };
-  }
-
-  inputOnKeyPress(event: InputKeyPressEvent): void {
-    if (event.key === 'Enter') {
-      this.sendInputValue();
-    }
-  }
-
-  updateInputValue(event: InputChangeEvent): void {
-    this.setState({
-      editValue: event.currentTarget.value,
-    });
-  }
-
-  async sendInputValue(): Promise<void> {
-    if (this.state.editValue !== '') {
-      api.setNickname(this.props.roomName, this.state.editValue);
-    }
-  }
-
-  render(): ComponentChild {
-    return <div><div>nickname: <span style={ { fontWeight: 'bold' } }>
-        { this.props.currentValue === null ? '(none)' : this.props.currentValue }
-      </span></div>
-      <div>
-      <input
-        value={this.state.editValue}
-        onInput={(event: InputChangeEvent) => this.updateInputValue(event)}
-        onKeyPress={(event: InputKeyPressEvent) => this.inputOnKeyPress(event)}
-      >
-      </input>
-      <input type='button' value='Change Nickname!' onClick={() => this.sendInputValue()}></input>
-  </div></div>;
-  }
-}
 
 interface Props {
   roomName: string;
@@ -76,9 +27,6 @@ interface State {
 function nspToheading(nsp: string): string {
   return nsp.replace(/^\//, '');
 }
-
-type InputChangeEvent = preactH.JSX.TargetedEvent<HTMLInputElement, Event>;
-type InputKeyPressEvent = preactH.JSX.TargetedEvent<HTMLInputElement, KeyboardEvent>;
 
 export default class Chat extends Component<Props, State> {
   private socket: SocketIOClient.Socket;

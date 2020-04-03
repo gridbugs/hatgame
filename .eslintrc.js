@@ -46,5 +46,7 @@ module.exports = {
     '@typescript-eslint/no-explicit-any': 'off',
     'max-classes-per-file': 'off',
     'no-console': 'off',
+    'import/prefer-default-export': 'off',
+    'no-useless-constructor': 'off',
   },
 };
