@@ -48,5 +48,7 @@ module.exports = {
     'no-console': 'off',
     'import/prefer-default-export': 'off',
     'no-useless-constructor': 'off',
+    'default-case': 'off',
+    'consistent-return': 'off',
   },
 };
