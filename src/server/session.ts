@@ -2,15 +2,18 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   Option,
   none,
-  some,
+  fromEither,
 } from 'fp-ts/lib/Option';
+import {
+  isRight,
+} from 'fp-ts/lib/Either';
 import * as s from '../common/state-io';
 
 export function sessionGetUserUuid(session?: Express.Session): Option<s.UserUuid> {
-  if (session !== undefined && s.UserUuid.t.is(session.userUuid)) {
-    return some(session.userUuid);
+  if (session === undefined) {
+    return none;
   }
-  return none;
+  return fromEither(s.UserUuid.t.decode(session.userUuid));
 }
 
 export function socketGetUserUuid(socket: SocketIO.Socket): Option<s.UserUuid> {
@@ -18,9 +21,12 @@ export function socketGetUserUuid(socket: SocketIO.Socket): Option<s.UserUuid> {
 }
 
 export function sessionEnsureUserUuid(session: Express.Session): s.UserUuid {
-  if (session.userUuid === undefined || !s.UserUuid.t.is(session.userUuid)) {
-    // eslint-disable-next-line no-param-reassign
-    session.userUuid = new s.UserUuid(uuidv4());
+  const userUuidResult = s.UserUuid.t.decode(session.userUuid);
+  if (isRight(userUuidResult)) {
+    return userUuidResult.right;
   }
-  return session.userUuid;
+  const userUuid = new s.UserUuid(uuidv4());
+  // eslint-disable-next-line no-param-reassign
+  session.userUuid = s.UserUuid.t.encode(userUuid);
+  return userUuid;
 }

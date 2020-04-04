@@ -102,6 +102,7 @@ app.get('/api/hello/:room', (req, res) => {
     const userUuid = sessionEnsureUserUuid(req.session);
     const { params: { room } } = req;
     appState.ensureInstanceExists(room);
+    console.log('new connection from ', userUuid.toString());
     res.send(api.HelloT.encode(api.mkHello(userUuid)));
   }
 });

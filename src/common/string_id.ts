@@ -21,7 +21,14 @@ export function mkStringIdType<A extends StringId>(C: StringIdConstructor<A>):
   t.Type<A, string, unknown> {
   return new t.Type<A, string, unknown>(
     C.name,
-    (input: unknown): input is A => input instanceof C,
+    (input: unknown): input is A => {
+      if (input instanceof C) {
+        console.log('yes', input, C);
+      } else {
+        console.log('no', input, C);
+      }
+      return input instanceof C;
+    },
     (input, context) => {
       if (typeof input === 'string') {
         return t.success(new C(input));

@@ -38,6 +38,9 @@ export const ChatMessageT = t.type({
   messageText: MessageText.t,
 });
 export type ChatMessage = t.TypeOf<typeof ChatMessageT>;
+export function mkChatMessage(userUuid: UserUuid, messageText: MessageText): ChatMessage {
+  return { userUuid, messageText };
+}
 
 export const UserT = t.type({
   userUuid: UserUuid.t,
@@ -64,11 +67,14 @@ export function stateAllUsers(state: State): i.List<User> {
   return i.List(state.users.values());
 }
 
-export function applyAddChatMessage(state: State, chatMessage: u.AddChatMessage): State {
+export function applyAddChatMessage(
+  state: State,
+  { userUuid, messageText }: u.AddChatMessage,
+): State {
   const { chatMessages } = state;
   return {
     ...state,
-    chatMessages: chatMessages.push(chatMessage),
+    chatMessages: chatMessages.push(mkChatMessage(userUuid, messageText)),
   };
 }
 

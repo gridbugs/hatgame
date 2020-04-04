@@ -1,7 +1,9 @@
 /** @jsx preactH */
 import { h as preactH, Component, ComponentChild, } from 'preact';
 import io from 'socket.io-client';
-import { map, getOrElse } from 'fp-ts/lib/Option';
+import { map, getOrElse, Option } from 'fp-ts/lib/Option';
+import { isRight } from 'fp-ts/lib/Either';
+import { PathReporter } from 'io-ts/lib/PathReporter';
 import * as api from './api';
 import { InputChangeEvent, InputKeyPressEvent } from './event';
 import { NicknameComponent } from './nickname';
@@ -24,6 +26,10 @@ function nspToheading(nsp: string): string {
   return nsp.replace(/^\//, '');
 }
 
+function displayMaybeNickname(nickname: Option<s.Nickname>): string {
+  return getOrElse(() => 'anonymous')(map(toString)(nickname));
+}
+
 export default class Chat extends Component<Props, State> {
   private socket: SocketIOClient.Socket;
 
@@ -37,13 +43,17 @@ export default class Chat extends Component<Props, State> {
   }
 
   componentDidMount(): void {
-    this.socket.on(socketApi.toString('MessageServerToClient'), (update: any) => {
-      console.log(update);
-      if (u.UpdateT.is(update)) {
+    this.socket.on(socketApi.toString('MessageServerToClient'), (updateEncoded: any) => {
+      const updateResult = u.UpdateT.decode(updateEncoded);
+      if (isRight(updateResult)) {
+        const update = updateResult.right;
         this.setState((prevState, _props) => {
+          console.log(update);
           const roomState = s.applyUpdate(prevState.roomState, update);
           return { roomState };
         });
+      } else {
+        console.error('failed to decode update', updateEncoded, PathReporter.report(updateResult));
       }
     });
   }
@@ -70,7 +80,7 @@ export default class Chat extends Component<Props, State> {
   }
 
   getNicknameForChatDisplay(userUuid: s.UserUuid): string {
-    return getOrElse(() => 'anonymous')(map(toString)(s.stateGetNickname(this.state.roomState, userUuid)));
+    return displayMaybeNickname(s.stateGetNickname(this.state.roomState, userUuid));
   }
 
   getCurrentNicknameForChatDisplay(): string {
@@ -101,7 +111,7 @@ export default class Chat extends Component<Props, State> {
               this.state.roomState.chatMessages.map(
                 (message, index) => <div key={index}><span style={ { fontWeight: 'bold' } }> {
                   this.getNicknameForChatDisplay(message.userUuid)
-                  }</span>: {message.messageText}</div>
+                  }</span>: {message.messageText.toString()}</div>
               ).toJS()
             }
           </div>
@@ -110,7 +120,7 @@ export default class Chat extends Component<Props, State> {
           {
             this.allUsersSortedByNickname().map(
               ({ userUuid, nickname }, index) => <div key={index}>
-                { nickname} ({ userUuid })
+                { displayMaybeNickname(nickname) } ({ userUuid.toString() })
               </div>
             )
           }

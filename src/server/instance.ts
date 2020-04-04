@@ -16,8 +16,7 @@ export default class Instance {
       if (isSome(maybeUserUuid)) {
         const userUuid = maybeUserUuid.value;
         console.log(`[${this.socketNamespace.name}] new connection from ${userUuid}`);
-        socket.emit(socketApi.toString('MessageServerToClient'), u.mkReplaceState(this.roomState));
-        console.log(JSON.stringify(this.roomState));
+        socket.emit(socketApi.toString('MessageServerToClient'), u.UpdateT.encode(u.mkReplaceState(this.roomState)));
         this.addUserUuid(userUuid);
         socket.on('disconnect', () => {
           console.log(`[${this.socketNamespace.name}] disconnect ${userUuid}`);
@@ -27,23 +26,23 @@ export default class Instance {
     });
   }
 
+  applyUpdate(update: u.Update): void {
+    this.roomState = s.applyUpdate(this.roomState, update);
+    const encoded = u.UpdateT.encode(update);
+    this.socketNamespace.emit(socketApi.toString('MessageServerToClient'), encoded);
+  }
+
   addUserUuid(userUuid: s.UserUuid): void {
     const user = s.mkUser(userUuid);
-    const addUserUuid = u.mkAddUser(user);
-    this.roomState = s.applyUpdate(this.roomState, addUserUuid);
-    this.socketNamespace.emit(socketApi.toString('MessageServerToClient'), addUserUuid);
+    this.applyUpdate(u.mkAddUser(user));
   }
 
   removeUserUuid(userUuid: s.UserUuid): void {
-    const removeUserUuid = u.mkRemoveUser(userUuid);
-    this.roomState = s.applyUpdate(this.roomState, removeUserUuid);
-    this.socketNamespace.emit(socketApi.toString('MessageServerToClient'), removeUserUuid);
+    this.applyUpdate(u.mkRemoveUser(userUuid));
   }
 
   sendMessage(userUuid: s.UserUuid, messageText: s.MessageText): void {
-    const addChatMessage = u.mkAddChatMessage(userUuid, messageText);
-    this.roomState = s.applyUpdate(this.roomState, addChatMessage);
-    this.socketNamespace.emit(socketApi.toString('MessageServerToClient'), addChatMessage);
+    this.applyUpdate(u.mkAddChatMessage(userUuid, messageText));
   }
 
   setNickname(userUuid: s.UserUuid, nickname: s.Nickname): boolean {
@@ -52,9 +51,7 @@ export default class Instance {
     if (allNicknames.contains(nickname.toString())) {
       return false;
     }
-    const setNickname = u.mkSetNickname(userUuid, nickname);
-    this.roomState = s.applyUpdate(this.roomState, setNickname);
-    this.socketNamespace.emit(socketApi.toString('MessageServerToClient'), setNickname);
+    this.applyUpdate(u.mkSetNickname(userUuid, nickname));
     return true;
   }
 }
