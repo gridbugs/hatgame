@@ -6,6 +6,7 @@ import {
   chain,
   Option,
 } from 'fp-ts/lib/Option';
+import { left, right, Either } from 'fp-ts/lib/Either';
 import * as tImmutable from 'io-ts-immutable';
 import * as i from 'immutable';
 import { StringId, mkStringIdType } from './string_id';
@@ -17,6 +18,14 @@ export class Nickname extends StringId {
     super(value);
     if (Nickname.illegal.has(value)) {
       throw new Error('illegal nickname');
+    }
+  }
+
+  static maybeMk(value: string): Either<string, Nickname> {
+    try {
+      return right(new Nickname(value));
+    } catch (_) {
+      return left('illegal name');
     }
   }
 

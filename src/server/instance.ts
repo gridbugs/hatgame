@@ -1,10 +1,12 @@
 import { List } from 'immutable';
 import socketIo from 'socket.io';
+import { Either, left, right } from 'fp-ts/lib/Either';
 import { isSome } from 'fp-ts/lib/Option';
 import * as s from '../common/state';
 import * as u from '../common/update';
 import * as socketApi from '../common/socket_api';
 import { socketGetUserUuid } from './session';
+import { Unit, UNIT } from '../common/fp';
 
 export default class Instance {
   private roomState: s.State;
@@ -45,13 +47,13 @@ export default class Instance {
     this.applyUpdate(u.mkAddChatMessage(userUuid, messageText));
   }
 
-  setNickname(userUuid: s.UserUuid, nickname: s.Nickname): boolean {
+  setNickname(userUuid: s.UserUuid, nickname: s.Nickname): Either<string, Unit> {
     const allNicknames = List(this.roomState.users.values())
       .map((us) => us.nickname).filter(isSome).map((us) => us.value.toString());
     if (allNicknames.contains(nickname.toString())) {
-      return false;
+      return left('nickname already taken');
     }
     this.applyUpdate(u.mkSetNickname(userUuid, nickname));
-    return true;
+    return right(UNIT);
   }
 }

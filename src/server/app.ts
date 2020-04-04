@@ -7,10 +7,19 @@ import socketIo from 'socket.io';
 import connectPgSimple from 'connect-pg-simple';
 import pg from 'pg';
 import { isSome } from 'fp-ts/lib/Option';
+import {
+  left,
+  right,
+  Either,
+  isLeft,
+} from 'fp-ts/lib/Either';
+import { either } from 'io-ts-types/lib/either';
+import * as t from 'io-ts';
 import AppState from './app_state';
 import { sessionGetUserUuid, sessionEnsureUserUuid } from './session';
 import * as api from '../common/api';
 import * as s from '../common/state';
+import { Unit, UNIT, UnitT } from '../common/fp';
 
 function getPort(): number {
   const port = process.env.PORT;
@@ -107,20 +116,44 @@ app.get('/api/hello/:room', (req, res) => {
   }
 });
 
+function sendMessage(
+  room: string,
+  userUuid: s.UserUuid,
+  messageText: s.MessageText,
+): Either<string, Unit> {
+  const instance = appState.getInstance(room);
+  if (instance === null) {
+    return left('no such room');
+  }
+  instance.sendMessage(userUuid, messageText);
+  return right(UNIT);
+}
+
+function setNickname(
+  room: string,
+  userUuid: s.UserUuid,
+  nicknameString: string,
+): Either<string, Unit> {
+  const instance = appState.getInstance(room);
+  if (instance === null) {
+    return left('no such room');
+  }
+  const maybeNickname = s.Nickname.maybeMk(nicknameString);
+  if (isLeft(maybeNickname)) {
+    return maybeNickname;
+  }
+  return instance.setNickname(userUuid, maybeNickname.right);
+}
+
 app.get('/api/message/:room/:text', (req, res) => {
   if (req.session !== undefined) {
     const maybeUserUuid = sessionGetUserUuid(req.session);
     if (isSome(maybeUserUuid)) {
       const userUuid = maybeUserUuid.value;
       const { params: { room, text } } = req;
-      const instance = appState.getInstance(room);
-      if (instance === null) {
-        res.send(api.newResult(false));
-        return;
-      }
-      instance.sendMessage(userUuid, new s.MessageText(text));
-      console.log(userUuid.toString(), room, text);
-      res.send(api.newResult(true));
+      const messageText = new s.MessageText(text);
+      const result = sendMessage(room, userUuid, messageText);
+      res.send(either(t.string, UnitT).encode(result));
     }
   }
 });
@@ -131,17 +164,8 @@ app.get('/api/setnickname/:room/:nickname', (req, res) => {
     if (isSome(maybeUserUuid)) {
       const userUuid = maybeUserUuid.value;
       const { params: { room, nickname } } = req;
-      const instance = appState.getInstance(room);
-      if (instance === null) {
-        res.send(api.newResult(false));
-        return;
-      }
-      if (!instance.setNickname(userUuid, new s.Nickname(nickname))) {
-        res.send(api.newResult(false));
-        return;
-      }
-      console.log(userUuid.toString(), room, nickname);
-      res.send(api.newResult(true));
+      const result = setNickname(room, userUuid, nickname);
+      res.send(either(t.string, UnitT).encode(result));
     }
   }
 });

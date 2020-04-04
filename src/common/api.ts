@@ -1,16 +1,6 @@
 import * as t from 'io-ts';
 import * as s from '../common/state';
 
-export interface Result {
-  success: boolean;
-}
-export function isResult(obj: any): obj is Result {
-  return typeof obj.success === 'boolean';
-}
-export function newResult(success: boolean): Result {
-  return { success };
-}
-
 export const HelloT = t.type({
   userUuid: s.UserUuid.t,
 });
