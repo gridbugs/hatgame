@@ -13,14 +13,16 @@ import { InputChangeEvent, InputKeyPressEvent } from './event';
 import { NicknameComponent } from './nickname';
 import { MESSAGE_SERVER_TO_CLIENT } from '../common/socket_api';
 import { UserUuid } from '../common/user_uuid';
+import * as s from '../common/state-io';
+import * as u from '../common/update';
 
 interface Props {
   roomName: string;
-  userUuid: UserUuid;
+  userUuid: s.UserUuid;
 }
 
 interface State {
-  roomState: RoomState;
+  roomState: s.State;
   inputValue: string;
 }
 
@@ -34,7 +36,7 @@ export default class Chat extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = {
-      roomState: EMPTY_STATE,
+      roomState: s.EMPTY_STATE,
       inputValue: '',
     };
     this.socket = io(`/${props.roomName}`);
@@ -43,9 +45,9 @@ export default class Chat extends Component<Props, State> {
   componentDidMount(): void {
     this.socket.on(MESSAGE_SERVER_TO_CLIENT, (update: any) => {
       console.log(update);
-      if (isUpdate(update)) {
+      if (u.UpdateT.is(update)) {
         this.setState((prevState, _props) => {
-          const roomState = updateState(prevState.roomState, update);
+          const roomState = s.applyUpdate(prevState.roomState, update);
           return { roomState };
         });
       }
@@ -74,7 +76,7 @@ export default class Chat extends Component<Props, State> {
   }
 
   currentNickname(): Nickname | null {
-    return this.state.roomState.userNicknames.get(this.props.userUuid, null);
+    return this.state.roomState.users.get(this.props.userUuid.toString(), null);
   }
 
   getNicknameOr(userUuid: UserUuid, defaultNickname: Nickname): Nickname {

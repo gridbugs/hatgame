@@ -2,6 +2,7 @@ import * as t from 'io-ts';
 import { option } from 'io-ts-types/lib/option';
 import { none, some } from 'fp-ts/lib/Option';
 import * as tImmutable from 'io-ts-immutable';
+import * as i from 'immutable';
 import { StringId, mkStringIdType } from './string_id';
 import * as u from './update';
 
@@ -37,12 +38,19 @@ export const UserT = t.type({
   nickname: option(Nickname.t),
 });
 export type User = t.TypeOf<typeof UserT>;
+export function mkUser(userUuid: UserUuid): User {
+  return { userUuid, nickname: none };
+}
 
 export const StateT = t.type({
   users: tImmutable.map(t.string, UserT, 'object'),
   chatMessages: tImmutable.list(ChatMessageT),
 });
 export type State = t.TypeOf<typeof StateT>;
+export const EMPTY_STATE: State = {
+  users: i.Map(),
+  chatMessages: i.List(),
+};
 
 export function applyAddChatMessage(state: State, chatMessage: u.AddChatMessage): State {
   const { chatMessages } = state;

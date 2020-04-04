@@ -9,6 +9,7 @@ import pg from 'pg';
 import { v4 as uuidv4 } from 'uuid';
 import AppState from './app_state';
 import * as api from '../common/api';
+import * as s from '../common/state-io';
 
 function getPort(): number {
   const port = process.env.PORT;
@@ -119,7 +120,7 @@ app.get('/api/message/:room/:text', (req, res) => {
         res.send(api.newResult(false));
         return;
       }
-      instance.sendMessage(req.session.uuid, text);
+      instance.sendMessage(req.session.uuid, new s.MessageText(text));
       console.log(req.session.uuid, room, text);
       res.send(api.newResult(true));
     }
@@ -135,7 +136,7 @@ app.get('/api/setnickname/:room/:nickname', (req, res) => {
         res.send(api.newResult(false));
         return;
       }
-      if (!instance.setNickname(req.session.uuid, nickname)) {
+      if (!instance.setNickname(req.session.uuid, new s.Nickname(nickname))) {
         res.send(api.newResult(false));
         return;
       }
