@@ -13,3 +13,15 @@ export function mapGetOpt<K, V>(map: i.Map<K, V>, key: K): Option<V> {
 export const UnitT = t.type({});
 export type Unit = t.TypeOf<typeof UnitT>;
 export const UNIT: Unit = {};
+
+export const ErrorT = new t.Type<Error, string, unknown>(
+  'Error',
+  (input: unknown): input is Error => input instanceof Error,
+  (input, context) => {
+    if (typeof input === 'string') {
+      return t.success(new Error(input));
+    }
+    return t.failure(input, context);
+  },
+  (x) => x.message,
+);

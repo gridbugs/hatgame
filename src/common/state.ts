@@ -21,11 +21,11 @@ export class Nickname extends StringId {
     }
   }
 
-  static maybeMk(value: string): Either<string, Nickname> {
+  static maybeMk(value: string): Either<Error, Nickname> {
     try {
       return right(new Nickname(value));
     } catch (_) {
-      return left('illegal name');
+      return left(new Error('illegal name'));
     }
   }
 

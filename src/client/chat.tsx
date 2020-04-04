@@ -43,7 +43,7 @@ export default class Chat extends Component<Props, State> {
   }
 
   componentDidMount(): void {
-    this.socket.on(socketApi.toString('MessageServerToClient'), (updateEncoded: any) => {
+    this.socket.on(socketApi.toString('MessageServerToClient'), (updateEncoded: unknown) => {
       const updateResult = u.UpdateT.decode(updateEncoded);
       if (isRight(updateResult)) {
         const update = updateResult.right;

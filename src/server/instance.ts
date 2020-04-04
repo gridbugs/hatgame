@@ -47,11 +47,11 @@ export default class Instance {
     this.applyUpdate(u.mkAddChatMessage(userUuid, messageText));
   }
 
-  setNickname(userUuid: s.UserUuid, nickname: s.Nickname): Either<string, Unit> {
+  setNickname(userUuid: s.UserUuid, nickname: s.Nickname): Either<Error, Unit> {
     const allNicknames = List(this.roomState.users.values())
       .map((us) => us.nickname).filter(isSome).map((us) => us.value.toString());
     if (allNicknames.contains(nickname.toString())) {
-      return left('nickname already taken');
+      return left(new Error('nickname already taken'));
     }
     this.applyUpdate(u.mkSetNickname(userUuid, nickname));
     return right(UNIT);

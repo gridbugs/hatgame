@@ -14,12 +14,16 @@ import {
   isLeft,
 } from 'fp-ts/lib/Either';
 import { either } from 'io-ts-types/lib/either';
-import * as t from 'io-ts';
 import AppState from './app_state';
 import { sessionGetUserUuid, sessionEnsureUserUuid } from './session';
 import * as api from '../common/api';
 import * as s from '../common/state';
-import { Unit, UNIT, UnitT } from '../common/fp';
+import {
+  Unit,
+  UNIT,
+  UnitT,
+  ErrorT,
+} from '../common/fp';
 
 function getPort(): number {
   const port = process.env.PORT;
@@ -120,10 +124,10 @@ function sendMessage(
   room: string,
   userUuid: s.UserUuid,
   messageText: s.MessageText,
-): Either<string, Unit> {
+): Either<Error, Unit> {
   const instance = appState.getInstance(room);
   if (instance === null) {
-    return left('no such room');
+    return left(new Error('no such room'));
   }
   instance.sendMessage(userUuid, messageText);
   return right(UNIT);
@@ -133,10 +137,10 @@ function setNickname(
   room: string,
   userUuid: s.UserUuid,
   nicknameString: string,
-): Either<string, Unit> {
+): Either<Error, Unit> {
   const instance = appState.getInstance(room);
   if (instance === null) {
-    return left('no such room');
+    return left(new Error('no such room'));
   }
   const maybeNickname = s.Nickname.maybeMk(nicknameString);
   if (isLeft(maybeNickname)) {
@@ -153,7 +157,7 @@ app.get('/api/message/:room/:text', (req, res) => {
       const { params: { room, text } } = req;
       const messageText = new s.MessageText(text);
       const result = sendMessage(room, userUuid, messageText);
-      res.send(either(t.string, UnitT).encode(result));
+      res.send(either(ErrorT, UnitT).encode(result));
     }
   }
 });
@@ -165,7 +169,7 @@ app.get('/api/setnickname/:room/:nickname', (req, res) => {
       const userUuid = maybeUserUuid.value;
       const { params: { room, nickname } } = req;
       const result = setNickname(room, userUuid, nickname);
-      res.send(either(t.string, UnitT).encode(result));
+      res.send(either(ErrorT, UnitT).encode(result));
     }
   }
 });
