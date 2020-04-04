@@ -1,10 +1,12 @@
+import { isRight } from 'fp-ts/lib/Either';
 import * as api from '../common/api';
 
 export async function hello(room: string): Promise<api.Hello> {
-  const obj = await (await fetch(`/api/hello/${room}`)).json();
-  if (api.isHello(obj)) {
-    return obj;
+  const helloEither = api.HelloT.decode(await (await fetch(`/api/hello/${room}`)).json());
+  if (isRight(helloEither)) {
+    return helloEither.right;
   }
+  console.log(helloEither);
   throw new Error('type error');
 }
 

@@ -13,6 +13,10 @@ export interface StringIdConstructor<A> {
   name: string;
 }
 
+export function toString(stringId: StringId): string {
+  return stringId.toString();
+}
+
 export function mkStringIdType<A extends StringId>(C: StringIdConstructor<A>):
   t.Type<A, string, unknown> {
   return new t.Type<A, string, unknown>(

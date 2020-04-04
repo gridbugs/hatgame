@@ -1,10 +1,16 @@
 import * as t from 'io-ts';
 import { option } from 'io-ts-types/lib/option';
-import { none, some } from 'fp-ts/lib/Option';
+import {
+  none,
+  some,
+  chain,
+  Option,
+} from 'fp-ts/lib/Option';
 import * as tImmutable from 'io-ts-immutable';
 import * as i from 'immutable';
 import { StringId, mkStringIdType } from './string_id';
 import * as u from './update';
+import * as fp from './fp';
 
 export class Nickname extends StringId {
   constructor(value: string) {
@@ -51,6 +57,12 @@ export const EMPTY_STATE: State = {
   users: i.Map(),
   chatMessages: i.List(),
 };
+export function stateGetNickname(state: State, userUuid: UserUuid): Option<Nickname> {
+  return chain((us: User) => us.nickname)(fp.mapGetOpt(state.users, userUuid.toString()));
+}
+export function stateAllUsers(state: State): i.List<User> {
+  return i.List(state.users.values());
+}
 
 export function applyAddChatMessage(state: State, chatMessage: u.AddChatMessage): State {
   const { chatMessages } = state;

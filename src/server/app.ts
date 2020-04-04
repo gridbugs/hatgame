@@ -6,8 +6,9 @@ import sharedSession from 'express-socket.io-session';
 import socketIo from 'socket.io';
 import connectPgSimple from 'connect-pg-simple';
 import pg from 'pg';
-import { v4 as uuidv4 } from 'uuid';
+import { isSome } from 'fp-ts/lib/Option';
 import AppState from './app_state';
+import { sessionGetUserUuid, sessionEnsureUserUuid } from './session';
 import * as api from '../common/api';
 import * as s from '../common/state-io';
 
@@ -98,30 +99,26 @@ server.listen(port, () => {
 
 app.get('/api/hello/:room', (req, res) => {
   if (req.session !== undefined) {
-    let uuid: string;
-    if (req.session.uuid === undefined) {
-      uuid = uuidv4();
-      req.session.uuid = uuid;
-    } else {
-      uuid = req.session.uuid;
-    }
+    const userUuid = sessionEnsureUserUuid(req.session);
     const { params: { room } } = req;
     appState.ensureInstanceExists(room);
-    res.send(api.newHello(uuid));
+    res.send(api.HelloT.encode(api.mkHello(userUuid)));
   }
 });
 
 app.get('/api/message/:room/:text', (req, res) => {
   if (req.session !== undefined) {
-    if (req.session.uuid !== undefined) {
+    const maybeUserUuid = sessionGetUserUuid(req.session);
+    if (isSome(maybeUserUuid)) {
+      const userUuid = maybeUserUuid.value;
       const { params: { room, text } } = req;
       const instance = appState.getInstance(room);
       if (instance === null) {
         res.send(api.newResult(false));
         return;
       }
-      instance.sendMessage(req.session.uuid, new s.MessageText(text));
-      console.log(req.session.uuid, room, text);
+      instance.sendMessage(userUuid, new s.MessageText(text));
+      console.log(userUuid.toString(), room, text);
       res.send(api.newResult(true));
     }
   }
@@ -129,18 +126,20 @@ app.get('/api/message/:room/:text', (req, res) => {
 
 app.get('/api/setnickname/:room/:nickname', (req, res) => {
   if (req.session !== undefined) {
-    if (req.session.uuid !== undefined) {
+    const maybeUserUuid = sessionGetUserUuid(req.session);
+    if (isSome(maybeUserUuid)) {
+      const userUuid = maybeUserUuid.value;
       const { params: { room, nickname } } = req;
       const instance = appState.getInstance(room);
       if (instance === null) {
         res.send(api.newResult(false));
         return;
       }
-      if (!instance.setNickname(req.session.uuid, new s.Nickname(nickname))) {
+      if (!instance.setNickname(userUuid, new s.Nickname(nickname))) {
         res.send(api.newResult(false));
         return;
       }
-      console.log(req.session.uuid, room, nickname);
+      console.log(userUuid.toString(), room, nickname);
       res.send(api.newResult(true));
     }
   }

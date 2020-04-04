@@ -1,20 +1,14 @@
 /** @jsx preactH */
 import { h as preactH, Component, ComponentChild, } from 'preact';
 import io from 'socket.io-client';
-import {
-  State as RoomState,
-  EMPTY_STATE,
-  isUpdate,
-  updateState,
-  Nickname,
-} from '../common/state';
+import { map, getOrElse } from 'fp-ts/lib/Option';
 import * as api from './api';
 import { InputChangeEvent, InputKeyPressEvent } from './event';
 import { NicknameComponent } from './nickname';
-import { MESSAGE_SERVER_TO_CLIENT } from '../common/socket_api';
-import { UserUuid } from '../common/user_uuid';
+import * as socketApi from '../common/socket_api';
 import * as s from '../common/state-io';
 import * as u from '../common/update';
+import { toString } from '../common/string_id';
 
 interface Props {
   roomName: string;
@@ -43,7 +37,7 @@ export default class Chat extends Component<Props, State> {
   }
 
   componentDidMount(): void {
-    this.socket.on(MESSAGE_SERVER_TO_CLIENT, (update: any) => {
+    this.socket.on(socketApi.toString('MessageServerToClient'), (update: any) => {
       console.log(update);
       if (u.UpdateT.is(update)) {
         this.setState((prevState, _props) => {
@@ -75,22 +69,16 @@ export default class Chat extends Component<Props, State> {
     }
   }
 
-  currentNickname(): Nickname | null {
-    return this.state.roomState.users.get(this.props.userUuid.toString(), null);
+  getNicknameForChatDisplay(userUuid: s.UserUuid): string {
+    return getOrElse(() => 'anonymous')(map(toString)(s.stateGetNickname(this.state.roomState, userUuid)));
   }
 
-  getNicknameOr(userUuid: UserUuid, defaultNickname: Nickname): Nickname {
-    return this.state.roomState.userNicknames.get(userUuid, defaultNickname);
+  getCurrentNicknameForChatDisplay(): string {
+    return this.getNicknameForChatDisplay(this.props.userUuid);
   }
 
-  getNicknameForChatDisplay(userUuid: UserUuid): Nickname {
-    return this.getNicknameOr(userUuid, 'anonymous');
-  }
-
-  allUsersSortedByNickname(): { nickname: Nickname; userUuid: UserUuid }[] {
-    const users = this.state.roomState.userUuids.toJS().map(
-      (userUuid) => ({ nickname: this.getNicknameForChatDisplay(userUuid), userUuid })
-    );
+  allUsersSortedByNickname(): readonly s.User[] {
+    const users = s.stateAllUsers(this.state.roomState).toJS();
     users.sort((a, b) => {
       if (a.nickname < b.nickname) {
         return -1;
@@ -138,7 +126,7 @@ export default class Chat extends Component<Props, State> {
       <input type='button' value='Send!' onClick={() => this.sendInputValue()}></input>
     </div>
     <NicknameComponent
-      currentValue={this.currentNickname()}
+      currentValue={this.getCurrentNicknameForChatDisplay()}
       roomName={this.props.roomName}/>
     </div>;
   }

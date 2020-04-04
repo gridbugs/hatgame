@@ -1,36 +1,27 @@
 import { List } from 'immutable';
 import socketIo from 'socket.io';
 import { isSome } from 'fp-ts/lib/Option';
-import GameInstance from '../common/game_instance';
 import * as s from '../common/state-io';
 import * as u from '../common/update';
-import { MESSAGE_SERVER_TO_CLIENT } from '../common/socket_api';
-
-function getSocketUserUuid(socket: socketIo.Socket): s.UserUuid | null {
-  if (socket.handshake.session !== undefined && typeof socket.handshake.session.uuid === 'string') {
-    return new s.UserUuid(socket.handshake.session.uuid);
-  }
-  return null;
-}
+import * as socketApi from '../common/socket_api';
+import { socketGetUserUuid } from './session';
 
 export default class Instance {
-  private game: GameInstance;
-
   private roomState: s.State;
 
   constructor(private socketNamespace: socketIo.Namespace) {
-    this.game = new GameInstance();
     this.roomState = s.EMPTY_STATE;
     this.socketNamespace.on('connection', (socket) => {
-      const uuid = getSocketUserUuid(socket);
-      if (uuid !== null) {
-        console.log(`[${this.socketNamespace.name}] new connection from ${uuid}`);
-        socket.emit(MESSAGE_SERVER_TO_CLIENT, u.mkReplaceState(this.roomState));
+      const maybeUserUuid = socketGetUserUuid(socket);
+      if (isSome(maybeUserUuid)) {
+        const userUuid = maybeUserUuid.value;
+        console.log(`[${this.socketNamespace.name}] new connection from ${userUuid}`);
+        socket.emit(socketApi.toString('MessageServerToClient'), u.mkReplaceState(this.roomState));
         console.log(JSON.stringify(this.roomState));
-        this.addUserUuid(uuid);
+        this.addUserUuid(userUuid);
         socket.on('disconnect', () => {
-          console.log(`[${this.socketNamespace.name}] disconnect ${uuid}`);
-          this.removeUserUuid(uuid);
+          console.log(`[${this.socketNamespace.name}] disconnect ${userUuid}`);
+          this.removeUserUuid(userUuid);
         });
       }
     });
@@ -40,19 +31,19 @@ export default class Instance {
     const user = s.mkUser(userUuid);
     const addUserUuid = u.mkAddUser(user);
     this.roomState = s.applyUpdate(this.roomState, addUserUuid);
-    this.socketNamespace.emit(MESSAGE_SERVER_TO_CLIENT, addUserUuid);
+    this.socketNamespace.emit(socketApi.toString('MessageServerToClient'), addUserUuid);
   }
 
   removeUserUuid(userUuid: s.UserUuid): void {
     const removeUserUuid = u.mkRemoveUser(userUuid);
     this.roomState = s.applyUpdate(this.roomState, removeUserUuid);
-    this.socketNamespace.emit(MESSAGE_SERVER_TO_CLIENT, removeUserUuid);
+    this.socketNamespace.emit(socketApi.toString('MessageServerToClient'), removeUserUuid);
   }
 
   sendMessage(userUuid: s.UserUuid, messageText: s.MessageText): void {
     const addChatMessage = u.mkAddChatMessage(userUuid, messageText);
     this.roomState = s.applyUpdate(this.roomState, addChatMessage);
-    this.socketNamespace.emit(MESSAGE_SERVER_TO_CLIENT, addChatMessage);
+    this.socketNamespace.emit(socketApi.toString('MessageServerToClient'), addChatMessage);
   }
 
   setNickname(userUuid: s.UserUuid, nickname: s.Nickname): boolean {
@@ -63,7 +54,7 @@ export default class Instance {
     }
     const setNickname = u.mkSetNickname(userUuid, nickname);
     this.roomState = s.applyUpdate(this.roomState, setNickname);
-    this.socketNamespace.emit(MESSAGE_SERVER_TO_CLIENT, setNickname);
+    this.socketNamespace.emit(socketApi.toString('MessageServerToClient'), setNickname);
     return true;
   }
 }
