@@ -1,5 +1,5 @@
 import * as t from 'io-ts';
-import * as s from './state-io';
+import * as s from './state';
 
 export const AddChatMessageT = t.type({
   tag: t.literal('AddChatMessage'),

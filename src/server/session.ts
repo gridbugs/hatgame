@@ -7,7 +7,7 @@ import {
 import {
   isRight,
 } from 'fp-ts/lib/Either';
-import * as s from '../common/state-io';
+import * as s from '../common/state';
 
 export function sessionGetUserUuid(session?: Express.Session): Option<s.UserUuid> {
   if (session === undefined) {

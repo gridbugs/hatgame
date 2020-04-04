@@ -8,7 +8,7 @@ import * as api from './api';
 import { InputChangeEvent, InputKeyPressEvent } from './event';
 import { NicknameComponent } from './nickname';
 import * as socketApi from '../common/socket_api';
-import * as s from '../common/state-io';
+import * as s from '../common/state';
 import * as u from '../common/update';
 import { toString } from '../common/string_id';
 

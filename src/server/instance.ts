@@ -1,7 +1,7 @@
 import { List } from 'immutable';
 import socketIo from 'socket.io';
 import { isSome } from 'fp-ts/lib/Option';
-import * as s from '../common/state-io';
+import * as s from '../common/state';
 import * as u from '../common/update';
 import * as socketApi from '../common/socket_api';
 import { socketGetUserUuid } from './session';

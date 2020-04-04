@@ -1,5 +1,5 @@
 import * as t from 'io-ts';
-import * as s from '../common/state-io';
+import * as s from '../common/state';
 
 export interface Result {
   success: boolean;

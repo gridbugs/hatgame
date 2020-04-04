@@ -10,7 +10,7 @@ import { isSome } from 'fp-ts/lib/Option';
 import AppState from './app_state';
 import { sessionGetUserUuid, sessionEnsureUserUuid } from './session';
 import * as api from '../common/api';
-import * as s from '../common/state-io';
+import * as s from '../common/state';
 
 function getPort(): number {
   const port = process.env.PORT;
