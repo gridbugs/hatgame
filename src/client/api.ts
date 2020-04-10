@@ -1,4 +1,3 @@
-import * as t from 'io-ts';
 import { isRight } from 'fp-ts/lib/Either';
 import { either } from 'io-ts-types/lib/either';
 import * as api from '../common/api';
