@@ -1,5 +1,6 @@
 import socketIo from 'socket.io';
 import sharedSession from 'express-socket.io-session';
+import { Option, some, none } from 'fp-ts/lib/Option';
 import Instance from './instance';
 
 export default class AppState {
@@ -20,11 +21,11 @@ export default class AppState {
     }
   }
 
-  getInstance(name: string): Instance | null {
+  getInstance(name: string): Option<Instance> {
     const instance = this.instances.get(name);
     if (instance === undefined) {
-      return null;
+      return none;
     }
-    return instance;
+    return some(instance);
   }
 }

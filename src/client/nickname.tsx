@@ -2,6 +2,7 @@
 import { h as preactH, Component, ComponentChild, } from 'preact';
 import { InputChangeEvent, InputKeyPressEvent } from './event';
 import * as api from './api';
+import { orErrorUnwrap } from '../common/fp';
 
 export interface Props {
   roomName: string;
@@ -34,7 +35,7 @@ export class NicknameComponent extends Component<Props, State> {
 
   sendInputValue(): void {
     if (this.state.editValue !== '') {
-      api.setNickname(this.props.roomName, this.state.editValue);
+      api.setNickname(this.props.roomName, this.state.editValue).then(orErrorUnwrap);
     }
   }
 

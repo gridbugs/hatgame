@@ -1,41 +1,42 @@
-import { isRight } from 'fp-ts/lib/Either';
-import { either } from 'io-ts-types/lib/either';
+import * as t from 'io-ts';
+import { isRight, left } from 'fp-ts/lib/Either';
+import { PathReporter } from 'io-ts/lib/PathReporter';
 import * as api from '../common/api';
-import { UnitT, ErrorT } from '../common/fp';
+import {
+  sanitizeError,
+  UnitOrErrorT,
+  UnitOrError,
+  OrError,
+} from '../common/fp';
 
-export async function hello(room: string): Promise<api.Hello> {
-  const helloEither = api.HelloT.decode(await (await fetch(`/api/hello/${room}`)).json());
-  if (isRight(helloEither)) {
-    return helloEither.right;
+async function stringApiCall<A, O, I>(
+  codec: t.Type<A, O, I>,
+  name: string,
+  ...args: string[]
+): Promise<OrError<A>> {
+  try {
+    const escapedName = encodeURIComponent(name);
+    const escapedArgs = args.map(encodeURIComponent);
+    const url = `/api/${[escapedName, ...escapedArgs].join('/')}`;
+    const result = codec.decode(await (await fetch(url)).json());
+    if (isRight(result)) {
+      return result;
+    }
+    const errorMessage = PathReporter.report(result).join('');
+    return left(new Error(errorMessage));
+  } catch (error) {
+    return left(sanitizeError(error));
   }
-  console.log(helloEither);
-  throw new Error('type error');
 }
 
-export async function message(room: string, text: string): Promise<void> {
-  const escaapedText = encodeURIComponent(text);
-  const result = either(ErrorT, UnitT).decode(
-    await (await fetch(`/api/message/${room}/${escaapedText}`)).json(),
-  );
-  if (isRight(result)) {
-    if (isRight(result.right)) {
-      return;
-    }
-    throw result.right.left;
-  }
-  throw new Error('type error');
+export function hello(room: string): Promise<OrError<api.Hello>> {
+  return stringApiCall(api.HelloT, 'hello', room);
 }
 
-export async function setNickname(room: string, nickname: string): Promise<void> {
-  const escapedNickname = encodeURIComponent(nickname);
-  const result = either(ErrorT, UnitT).decode(
-    await (await fetch(`/api/setnickname/${room}/${escapedNickname}`)).json(),
-  );
-  if (isRight(result)) {
-    if (isRight(result.right)) {
-      return;
-    }
-    throw result.right.left;
-  }
-  throw new Error('type error');
+export function message(room: string, text: string): Promise<UnitOrError> {
+  return stringApiCall(UnitOrErrorT, 'message', room, text);
+}
+
+export function setNickname(room: string, nickname: string): Promise<UnitOrError> {
+  return stringApiCall(UnitOrErrorT, 'setnickname', room, nickname);
 }

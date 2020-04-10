@@ -8,21 +8,22 @@ import connectPgSimple from 'connect-pg-simple';
 import pg from 'pg';
 import { isSome } from 'fp-ts/lib/Option';
 import {
-  left,
-  right,
   Either,
-  isLeft,
+  fromOption,
+  chain,
+  map,
 } from 'fp-ts/lib/Either';
-import { either } from 'io-ts-types/lib/either';
+import { pipe } from 'fp-ts/lib/pipeable';
 import AppState from './app_state';
+import Instance from './instance';
 import { sessionGetUserUuid, sessionEnsureUserUuid } from './session';
 import * as api from '../common/api';
 import * as s from '../common/state';
 import {
-  Unit,
+  OrError,
+  UnitOrErrorT,
+  RIGHT_UNIT,
   UNIT,
-  UnitT,
-  ErrorT,
 } from '../common/fp';
 
 function getPort(): number {
@@ -110,6 +111,25 @@ server.listen(port, () => {
   console.log(`Listening on port ${port}`);
 });
 
+function apiRegister(
+  url: string,
+  handler: (userUuiud: s.UserUuid, params: { [key: string]: string }) => Either<string, any>,
+): void {
+  app.get(url, (req, res) => {
+    if (req.session !== undefined) {
+      const maybeUserUuid = sessionGetUserUuid(req.session);
+      if (isSome(maybeUserUuid)) {
+        const response = handler(maybeUserUuid.value, req.params);
+        res.send(response);
+      }
+    }
+  });
+}
+
+function instanceFromRoom(room: string): OrError<Instance> {
+  return fromOption(() => new Error('no such room'))(appState.getInstance(room));
+}
+
 app.get('/api/hello/:room', (req, res) => {
   if (req.session !== undefined) {
     const userUuid = sessionEnsureUserUuid(req.session);
@@ -120,56 +140,20 @@ app.get('/api/hello/:room', (req, res) => {
   }
 });
 
-function sendMessage(
-  room: string,
-  userUuid: s.UserUuid,
-  messageText: s.MessageText,
-): Either<Error, Unit> {
-  const instance = appState.getInstance(room);
-  if (instance === null) {
-    return left(new Error('no such room'));
-  }
-  instance.sendMessage(userUuid, messageText);
-  return right(UNIT);
-}
+apiRegister('/api/setnickname/:room/:nickname', (userUuid, params) => pipe(
+  instanceFromRoom(params.room),
+  chain((instance) => pipe(
+    s.Nickname.maybeMk(params.nickname),
+    chain((nickname) => instance.setNickname(userUuid, nickname)),
+  )),
+  UnitOrErrorT.encode,
+));
 
-function setNickname(
-  room: string,
-  userUuid: s.UserUuid,
-  nicknameString: string,
-): Either<Error, Unit> {
-  const instance = appState.getInstance(room);
-  if (instance === null) {
-    return left(new Error('no such room'));
-  }
-  const maybeNickname = s.Nickname.maybeMk(nicknameString);
-  if (isLeft(maybeNickname)) {
-    return maybeNickname;
-  }
-  return instance.setNickname(userUuid, maybeNickname.right);
-}
-
-app.get('/api/message/:room/:text', (req, res) => {
-  if (req.session !== undefined) {
-    const maybeUserUuid = sessionGetUserUuid(req.session);
-    if (isSome(maybeUserUuid)) {
-      const userUuid = maybeUserUuid.value;
-      const { params: { room, text } } = req;
-      const messageText = new s.MessageText(text);
-      const result = sendMessage(room, userUuid, messageText);
-      res.send(either(ErrorT, UnitT).encode(result));
-    }
-  }
-});
-
-app.get('/api/setnickname/:room/:nickname', (req, res) => {
-  if (req.session !== undefined) {
-    const maybeUserUuid = sessionGetUserUuid(req.session);
-    if (isSome(maybeUserUuid)) {
-      const userUuid = maybeUserUuid.value;
-      const { params: { room, nickname } } = req;
-      const result = setNickname(room, userUuid, nickname);
-      res.send(either(ErrorT, UnitT).encode(result));
-    }
-  }
-});
+apiRegister('/api/message/:room/:text', (userUuid, params) => pipe(
+  instanceFromRoom(params.room),
+  map((instance) => {
+    instance.sendMessage(userUuid, new s.MessageText(params.text));
+    return UNIT;
+  }),
+  UnitOrErrorT.encode,
+));

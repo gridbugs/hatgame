@@ -11,6 +11,7 @@ import * as socketApi from '../common/socket_api';
 import * as s from '../common/state';
 import * as u from '../common/update';
 import { toString } from '../common/string_id';
+import { orErrorUnwrap } from '../common/fp';
 
 interface Props {
   roomName: string;
@@ -70,9 +71,9 @@ export default class Chat extends Component<Props, State> {
     });
   }
 
-  async sendInputValue(): Promise<void> {
+  sendInputValue(): void {
     if (this.state.inputValue !== '') {
-      api.message(this.props.roomName, this.state.inputValue);
+      api.message(this.props.roomName, this.state.inputValue).then(orErrorUnwrap);
       this.setState({
         inputValue: '',
       });
