@@ -1,10 +1,11 @@
 import * as t from 'io-ts';
-import { isRight, left } from 'fp-ts/lib/Either';
+import { isRight, left, flatten } from 'fp-ts/lib/Either';
 import { PathReporter } from 'io-ts/lib/PathReporter';
 import * as api from '../common/api';
 import {
   sanitizeError,
   UnitOrErrorT,
+  UnitT,
   UnitOrError,
   OrError,
 } from '../common/fp';
@@ -18,7 +19,8 @@ async function stringApiCall<A, O, I>(
     const escapedName = encodeURIComponent(name);
     const escapedArgs = args.map(encodeURIComponent);
     const url = `/api/${[escapedName, ...escapedArgs].join('/')}`;
-    const result = codec.decode(await (await fetch(url)).json());
+    const response = await (await fetch(url)).json();
+    const result = codec.decode(response);
     if (isRight(result)) {
       return result;
     }
@@ -29,14 +31,22 @@ async function stringApiCall<A, O, I>(
   }
 }
 
-export function hello(room: string): Promise<OrError<api.Hello>> {
-  return stringApiCall(api.HelloT, 'hello', room);
+export function hello(): Promise<OrError<api.Hello>> {
+  return stringApiCall(api.HelloT, 'hello');
 }
 
-export function message(room: string, text: string): Promise<UnitOrError> {
-  return stringApiCall(UnitOrErrorT, 'message', room, text);
+export function create(): Promise<OrError<string>> {
+  return stringApiCall(t.string, 'create');
 }
 
-export function setNickname(room: string, nickname: string): Promise<UnitOrError> {
-  return stringApiCall(UnitOrErrorT, 'setnickname', room, nickname);
+export function ensure(room: string): Promise<UnitOrError> {
+  return stringApiCall(UnitT, 'ensure', room);
+}
+
+export async function message(room: string, text: string): Promise<UnitOrError> {
+  return flatten(await stringApiCall(UnitOrErrorT, 'message', room, text));
+}
+
+export async function setNickname(room: string, nickname: string): Promise<UnitOrError> {
+  return flatten(await stringApiCall(UnitOrErrorT, 'setnickname', room, nickname));
 }

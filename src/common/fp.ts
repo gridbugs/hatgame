@@ -12,9 +12,11 @@ export function mapGetOpt<K, V>(map: i.Map<K, V>, key: K): Option<V> {
   return some(value);
 }
 
-export const UnitT = t.type({});
+export const UnitT = t.type({
+  _tag: t.literal('Unit'),
+});
 export type Unit = t.TypeOf<typeof UnitT>;
-export const UNIT: Unit = {};
+export const UNIT: Unit = { _tag: 'Unit' };
 export const RIGHT_UNIT: Either<never, Unit> = right(UNIT);
 
 export const ErrorT = new t.Type<Error, string, unknown>(

@@ -6,9 +6,9 @@ import sharedSession from 'express-socket.io-session';
 import socketIo from 'socket.io';
 import connectPgSimple from 'connect-pg-simple';
 import pg from 'pg';
+import * as t from 'io-ts';
 import { isSome } from 'fp-ts/lib/Option';
 import {
-  Either,
   fromOption,
   chain,
   map,
@@ -22,6 +22,7 @@ import * as s from '../common/state';
 import {
   OrError,
   UnitOrErrorT,
+  UnitT,
   RIGHT_UNIT,
   UNIT,
 } from '../common/fp';
@@ -104,6 +105,14 @@ app.get('/', (_req, res) => {
 });
 
 app.get('/room/:room', (_req, res) => {
+  res.sendFile(path.resolve(__dirname, 'chat.html'));
+});
+
+app.get('/create', (_req, res) => {
+  res.sendFile(path.resolve(__dirname, 'create.html'));
+});
+
+app.get('/game/:room', (_req, res) => {
   res.sendFile(path.resolve(__dirname, 'game.html'));
 });
 
@@ -111,16 +120,18 @@ server.listen(port, () => {
   console.log(`Listening on port ${port}`);
 });
 
-function apiRegister(
+function apiRegister<A, O, I>(
+  codec: t.Type<A, O, I>,
   url: string,
-  handler: (userUuiud: s.UserUuid, params: { [key: string]: string }) => Either<string, any>,
+  handler: (userUuiud: s.UserUuid, params: { [key: string]: string }) => A,
 ): void {
   app.get(url, (req, res) => {
     if (req.session !== undefined) {
       const maybeUserUuid = sessionGetUserUuid(req.session);
       if (isSome(maybeUserUuid)) {
         const response = handler(maybeUserUuid.value, req.params);
-        res.send(response);
+        const responseEncoded = codec.encode(response);
+        res.send(JSON.stringify(responseEncoded));
       }
     }
   });
@@ -130,30 +141,37 @@ function instanceFromRoom(room: string): OrError<Instance> {
   return fromOption(() => new Error('no such room'))(appState.getInstance(room));
 }
 
-app.get('/api/hello/:room', (req, res) => {
+app.get('/api/hello', (req, res) => {
   if (req.session !== undefined) {
     const userUuid = sessionEnsureUserUuid(req.session);
-    const { params: { room } } = req;
-    appState.ensureInstanceExists(room);
-    console.log('new connection from ', userUuid.toString());
     res.send(api.HelloT.encode(api.mkHello(userUuid)));
   }
 });
 
-apiRegister('/api/setnickname/:room/:nickname', (userUuid, params) => pipe(
+apiRegister(UnitT, '/api/ensure/:room', (_userUuid, params) => {
+  const { room } = params;
+  appState.ensureInstanceExists(room);
+  return UNIT;
+});
+
+apiRegister(t.string, '/api/create', (userUuid, _params) => {
+  const instance = appState.makeInstanceRandomName();
+  instance.setHost(userUuid);
+  return instance.name();
+});
+
+apiRegister(UnitOrErrorT, '/api/setnickname/:room/:nickname', (userUuid, params) => pipe(
   instanceFromRoom(params.room),
   chain((instance) => pipe(
     s.Nickname.maybeMk(params.nickname),
     chain((nickname) => instance.setNickname(userUuid, nickname)),
   )),
-  UnitOrErrorT.encode,
 ));
 
-apiRegister('/api/message/:room/:text', (userUuid, params) => pipe(
+apiRegister(UnitOrErrorT, '/api/message/:room/:text', (userUuid, params) => pipe(
   instanceFromRoom(params.room),
   map((instance) => {
     instance.sendMessage(userUuid, new s.MessageText(params.text));
     return UNIT;
   }),
-  UnitOrErrorT.encode,
 ));

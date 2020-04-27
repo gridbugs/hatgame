@@ -3,6 +3,10 @@ import sharedSession from 'express-socket.io-session';
 import { Option, some, none } from 'fp-ts/lib/Option';
 import Instance from './instance';
 
+function randomName(): string {
+  return Math.random().toString(36).substring(2).substring(0, 6);
+}
+
 export default class AppState {
   private instances: Map<string, Instance>;
 
@@ -13,11 +17,23 @@ export default class AppState {
     this.instances = new Map();
   }
 
-  ensureInstanceExists(name: string): void {
-    if (!this.instances.has(name)) {
+  ensureInstanceExists(name: string): Instance {
+    const instance = this.instances.get(name);
+    if (instance === undefined) {
       const socketNamespace = this.socketServer.of(name).use(this.socketSession);
-      const instance = new Instance(socketNamespace);
-      this.instances.set(name, instance);
+      const newInstance = new Instance(socketNamespace);
+      this.instances.set(name, newInstance);
+      return newInstance;
+    }
+    return instance;
+  }
+
+  makeInstanceRandomName(): Instance {
+    for (;;) {
+      const name = randomName();
+      if (!this.instances.has(name)) {
+        return this.ensureInstanceExists(name);
+      }
     }
   }
 

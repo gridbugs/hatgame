@@ -1,7 +1,12 @@
 import { List } from 'immutable';
 import socketIo from 'socket.io';
 import { left } from 'fp-ts/lib/Either';
-import { isSome } from 'fp-ts/lib/Option';
+import {
+  isSome,
+  some,
+  none,
+  Option,
+} from 'fp-ts/lib/Option';
 import * as s from '../common/state';
 import * as u from '../common/update';
 import * as socketApi from '../common/socket_api';
@@ -10,6 +15,8 @@ import { UnitOrError, RIGHT_UNIT } from '../common/fp';
 
 export default class Instance {
   private roomState: s.State;
+
+  private host: Option<s.UserUuid>;
 
   constructor(private socketNamespace: socketIo.Namespace) {
     this.roomState = s.EMPTY_STATE;
@@ -26,6 +33,15 @@ export default class Instance {
         });
       }
     });
+    this.host = none;
+  }
+
+  name(): string {
+    return this.socketNamespace.name.replace(/^\//, '');
+  }
+
+  setHost(host: s.UserUuid): void {
+    this.host = some(host);
   }
 
   applyUpdate(update: u.Update): void {
