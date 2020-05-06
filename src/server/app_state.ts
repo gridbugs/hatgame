@@ -3,8 +3,10 @@ import sharedSession from 'express-socket.io-session';
 import { Option, some, none } from 'fp-ts/lib/Option';
 import Instance from './instance';
 
+const RANDOM_NAME_LENGTH = 4;
+
 function randomName(): string {
-  return Math.random().toString(36).substring(2).substring(0, 6);
+  return Math.random().toString(36).substring(2).substring(0, RANDOM_NAME_LENGTH);
 }
 
 export default class AppState {

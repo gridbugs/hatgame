@@ -48,7 +48,7 @@ class Game extends Component<Props, State> {
 
   render(): ComponentChild {
     return <div>
-      <h1>The Hat Game: {this.props.roomName}</h1>
+      <h1>The Hat Game: <a href={`/game/${this.props.roomName}`}>{this.props.roomName}</a></h1>
     </div>;
   }
 }
