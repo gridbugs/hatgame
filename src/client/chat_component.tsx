@@ -1,8 +1,15 @@
 /** @jsx preactH */
 import { h as preactH, Component, ComponentChild, } from 'preact';
 import io from 'socket.io-client';
-import { map, getOrElse, Option } from 'fp-ts/lib/Option';
+import {
+  map,
+  getOrElse,
+  Option,
+  chain,
+  isSome,
+} from 'fp-ts/lib/Option';
 import { isRight } from 'fp-ts/lib/Either';
+import { pipe } from 'fp-ts/lib/pipeable';
 import { PathReporter } from 'io-ts/lib/PathReporter';
 import * as api from './api';
 import { InputChangeEvent, InputKeyPressEvent } from './event';
@@ -21,10 +28,6 @@ interface Props {
 interface State {
   roomState: s.State;
   inputValue: string;
-}
-
-function nspToheading(nsp: string): string {
-  return nsp.replace(/^\//, '');
 }
 
 function displayMaybeNickname(nickname: Option<s.Nickname>): string {
@@ -49,7 +52,7 @@ export default class Chat extends Component<Props, State> {
       if (isRight(updateResult)) {
         const update = updateResult.right;
         this.setState((prevState, _props) => {
-          console.log(update);
+          console.log(u.UpdateT.encode(update));
           const roomState = s.applyUpdate(prevState.roomState, update);
           return { roomState };
         });
@@ -102,9 +105,26 @@ export default class Chat extends Component<Props, State> {
     return users;
   }
 
+  hostNickname(): Option<s.Nickname> {
+    return pipe(
+      this.state.roomState.host,
+      chain((host) => s.stateGetNickname(this.state.roomState, host)),
+    );
+  }
+
+  hostMessage(): ComponentChild {
+    if (isSome(this.state.roomState.host)) {
+      if (this.state.roomState.host.value.eq(this.props.userUuid)) {
+        return <div>You are the host</div>;
+      }
+      return <div>{displayMaybeNickname(this.hostNickname())} is the host</div>;
+    }
+    return <div>unknown host</div>;
+  }
+
   render(): ComponentChild {
     return <div>
-      <h1>{nspToheading(this.socket.nsp)}</h1>
+      { this.hostMessage() }
       <div style= { { display: 'flex' } }>
         <div style={ { height: '20em', width: '60em', overflow: 'scroll' } }>
           <div>
@@ -121,7 +141,7 @@ export default class Chat extends Component<Props, State> {
           {
             this.allUsersSortedByNickname().map(
               ({ userUuid, nickname }, index) => <div key={index}>
-                { displayMaybeNickname(nickname) } ({ userUuid.toString() })
+                { displayMaybeNickname(nickname) } { userUuid.eq(this.props.userUuid) ? '(you)' : '' } ({ userUuid.toString() })
               </div>
             )
           }

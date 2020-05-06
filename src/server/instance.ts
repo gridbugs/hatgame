@@ -1,12 +1,7 @@
 import { List } from 'immutable';
 import socketIo from 'socket.io';
 import { left } from 'fp-ts/lib/Either';
-import {
-  isSome,
-  some,
-  none,
-  Option,
-} from 'fp-ts/lib/Option';
+import { isSome } from 'fp-ts/lib/Option';
 import * as s from '../common/state';
 import * as u from '../common/update';
 import * as socketApi from '../common/socket_api';
@@ -16,8 +11,6 @@ import { UnitOrError, RIGHT_UNIT } from '../common/fp';
 export default class Instance {
   private roomState: s.State;
 
-  private host: Option<s.UserUuid>;
-
   constructor(private socketNamespace: socketIo.Namespace) {
     this.roomState = s.EMPTY_STATE;
     this.socketNamespace.on('connection', (socket) => {
@@ -26,28 +19,28 @@ export default class Instance {
         const userUuid = maybeUserUuid.value;
         console.log(`[${this.socketNamespace.name}] new connection from ${userUuid}`);
         socket.emit(socketApi.toString('MessageServerToClient'), u.UpdateT.encode(u.mkReplaceState(this.roomState)));
-        this.addUserUuid(userUuid);
+        if (!this.roomState.users.has(userUuid.toString())) {
+          this.addUserUuid(userUuid);
+        }
         socket.on('disconnect', () => {
           console.log(`[${this.socketNamespace.name}] disconnect ${userUuid}`);
-          this.removeUserUuid(userUuid);
         });
       }
     });
-    this.host = none;
   }
 
   name(): string {
     return this.socketNamespace.name.replace(/^\//, '');
   }
 
-  setHost(host: s.UserUuid): void {
-    this.host = some(host);
-  }
-
   applyUpdate(update: u.Update): void {
     this.roomState = s.applyUpdate(this.roomState, update);
     const encoded = u.UpdateT.encode(update);
     this.socketNamespace.emit(socketApi.toString('MessageServerToClient'), encoded);
+  }
+
+  setHost(host: s.UserUuid): void {
+    this.applyUpdate(u.mkSetHost(host));
   }
 
   addUserUuid(userUuid: s.UserUuid): void {

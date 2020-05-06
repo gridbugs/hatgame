@@ -6,6 +6,7 @@ import {
   ComponentChild,
 } from 'preact';
 import io from 'socket.io-client';
+import Chat from './chat_component';
 import { getGameRoomNameFromPathname } from './room_name';
 import * as api from './api';
 import { orErrorUnwrap } from '../common/fp';
@@ -49,6 +50,7 @@ class Game extends Component<Props, State> {
   render(): ComponentChild {
     return <div>
       <h1>The Hat Game: <a href={`/game/${this.props.roomName}`}>{this.props.roomName}</a></h1>
+      <div><Chat roomName={this.props.roomName} userUuid={this.props.userUuid} /></div>
     </div>;
   }
 }

@@ -60,11 +60,23 @@ export function mkRemoveUser(
   return { tag: 'RemoveUser', userUuid };
 }
 
+export const SetHostT = t.type({
+  tag: t.literal('SetHost'),
+  userUuid: s.UserUuid.t,
+});
+export type SetHost = t.TypeOf<typeof SetHostT>;
+export function mkSetHost(
+  userUuid: s.UserUuid,
+): SetHost {
+  return { tag: 'SetHost', userUuid };
+}
+
 export const UpdateT = t.union([
   AddChatMessageT,
   SetNicknameT,
   ReplaceStateT,
   AddUserT,
   RemoveUserT,
+  SetHostT,
 ], 'Update');
 export type Update = t.TypeOf<typeof UpdateT>;

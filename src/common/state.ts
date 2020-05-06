@@ -61,11 +61,13 @@ export function mkUser(userUuid: UserUuid): User {
 }
 
 export const StateT = t.type({
+  host: option(UserUuid.t),
   users: tImmutable.map(t.string, UserT, 'object'),
   chatMessages: tImmutable.list(ChatMessageT),
 });
 export type State = t.TypeOf<typeof StateT>;
 export const EMPTY_STATE: State = {
+  host: none,
   users: i.Map(),
   chatMessages: i.List(),
 };
@@ -117,6 +119,13 @@ export function applyRemoveUser(state: State, { userUuid }: u.RemoveUser): State
   };
 }
 
+export function applySetHost(state: State, { userUuid }: u.SetHost): State {
+  return {
+    ...state,
+    host: some(userUuid),
+  };
+}
+
 export function applyUpdate(state: State, update: u.Update): State {
   switch (update.tag) {
     case 'AddChatMessage': return applyAddChatMessage(state, update);
@@ -124,5 +133,6 @@ export function applyUpdate(state: State, update: u.Update): State {
     case 'ReplaceState': return applyReplaceState(state, update);
     case 'AddUser': return applyAddUser(state, update);
     case 'RemoveUser': return applyRemoveUser(state, update);
+    case 'SetHost': return applySetHost(state, update);
   }
 }

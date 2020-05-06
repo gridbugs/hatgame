@@ -6,6 +6,10 @@ export abstract class StringId {
   toString(): string {
     return this.raw;
   }
+
+  eq(other: StringId): boolean {
+    return this.raw === other.raw;
+  }
 }
 
 export interface StringIdConstructor<A> {
