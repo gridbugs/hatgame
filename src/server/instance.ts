@@ -11,8 +11,8 @@ import { UnitOrError, RIGHT_UNIT } from '../common/fp';
 export default class Instance {
   private roomState: s.State;
 
-  constructor(private socketNamespace: socketIo.Namespace) {
-    this.roomState = s.EMPTY_STATE;
+  constructor(private socketNamespace: socketIo.Namespace, host: s.UserUuid) {
+    this.roomState = s.mkState(host);
     this.socketNamespace.on('connection', (socket) => {
       const maybeUserUuid = socketGetUserUuid(socket);
       if (isSome(maybeUserUuid)) {
@@ -63,6 +63,18 @@ export default class Instance {
       return left(new Error('nickname already taken'));
     }
     this.applyUpdate(u.mkSetNickname(userUuid, nickname));
+    return RIGHT_UNIT;
+  }
+
+  baseState(): s.State {
+    return s.stateWithJustHost(this.roomState);
+  }
+
+  startGame(userUuid: s.UserUuid): UnitOrError {
+    if (!this.roomState.host.eq(userUuid)) {
+      return left(new Error('only the host can start the game'));
+    }
+    this.applyUpdate(u.mkStartGame());
     return RIGHT_UNIT;
   }
 }

@@ -4,7 +4,6 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 module.exports = (env, argv) => {
   return {
     entry: {
-      chat: path.resolve('.', 'src', 'client', 'chat.tsx'),
       index: path.resolve('.', 'src', 'client', 'index.ts'),
       create: path.resolve('.', 'src', 'client', 'create.ts'),
       game: path.resolve('.', 'src', 'client', 'game.tsx'),
@@ -36,11 +35,6 @@ module.exports = (env, argv) => {
         template: './static/index.html',
         filename: 'index.html',
         chunks: ['index'],
-      }),
-      new HtmlWebpackPlugin({
-        template: './static/chat.html',
-        filename: 'chat.html',
-        chunks: [ 'chat' ],
       }),
       new HtmlWebpackPlugin({
         template: './static/create.html',

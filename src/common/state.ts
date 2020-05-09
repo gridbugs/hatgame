@@ -4,8 +4,10 @@ import {
   none,
   some,
   chain,
+  getOrElse,
   Option,
 } from 'fp-ts/lib/Option';
+import { pipe } from 'fp-ts/lib/pipeable';
 import { left, right, Either } from 'fp-ts/lib/Either';
 import * as tImmutable from 'io-ts-immutable';
 import * as i from 'immutable';
@@ -60,22 +62,28 @@ export function mkUser(userUuid: UserUuid): User {
   return { userUuid, nickname: none };
 }
 
+export const PhaseT = t.union([
+  t.literal('Lobby'),
+  t.literal('Play'),
+]);
+export type Phase = t.TypeOf<typeof PhaseT>;
+export const PHASE_LOBBY: Phase = 'Lobby';
+export const PHASE_PLAY: Phase = 'Play';
+
 export const StateT = t.type({
-  host: option(UserUuid.t),
+  host: UserUuid.t,
+  phase: PhaseT,
   users: tImmutable.map(t.string, UserT, 'object'),
   chatMessages: tImmutable.list(ChatMessageT),
 });
 export type State = t.TypeOf<typeof StateT>;
-export const EMPTY_STATE: State = {
-  host: none,
-  users: i.Map(),
-  chatMessages: i.List(),
-};
-export function stateGetNickname(state: State, userUuid: UserUuid): Option<Nickname> {
-  return chain((us: User) => us.nickname)(fp.mapGetOpt(state.users, userUuid.toString()));
-}
-export function stateAllUsers(state: State): i.List<User> {
-  return i.List(state.users.values());
+export function mkState(host: UserUuid): State {
+  return {
+    host,
+    phase: PHASE_LOBBY,
+    users: i.Map(),
+    chatMessages: i.List(),
+  };
 }
 
 export function applyAddChatMessage(
@@ -122,7 +130,14 @@ export function applyRemoveUser(state: State, { userUuid }: u.RemoveUser): State
 export function applySetHost(state: State, { userUuid }: u.SetHost): State {
   return {
     ...state,
-    host: some(userUuid),
+    host: userUuid,
+  };
+}
+
+export function applyStartGame(state: State, { tag: _ }: u.StartGame): State {
+  return {
+    ...state,
+    phase: PHASE_PLAY,
   };
 }
 
@@ -134,5 +149,36 @@ export function applyUpdate(state: State, update: u.Update): State {
     case 'AddUser': return applyAddUser(state, update);
     case 'RemoveUser': return applyRemoveUser(state, update);
     case 'SetHost': return applySetHost(state, update);
+    case 'StartGame': return applyStartGame(state, update);
   }
+}
+
+export function getUser(state: State, userUuid: UserUuid): User {
+  return pipe(
+    fp.mapGetOpt(state.users, userUuid.toString()),
+    getOrElse(() => mkUser(userUuid)),
+  );
+}
+
+export function getHostUser(state: State): User {
+  return getUser(state, state.host);
+}
+
+export function getNicknameOfUser(state: State, userUuid: UserUuid): Option<Nickname> {
+  return pipe(
+    fp.mapGetOpt(state.users, userUuid.toString()),
+    chain((user) => user.nickname),
+  );
+}
+
+export function allUsers(state: State): i.List<User> {
+  return i.List(state.users.values());
+}
+
+export function stateWithJustHost(state: State): State {
+  const users = state.users.filter(({ userUuid }) => userUuid.eq(state.host));
+  return {
+    ...mkState(state.host),
+    users,
+  };
 }

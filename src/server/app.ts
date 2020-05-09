@@ -21,8 +21,8 @@ import * as api from '../common/api';
 import * as s from '../common/state';
 import {
   OrError,
+  orError,
   UnitOrErrorT,
-  UnitT,
   RIGHT_UNIT,
   UNIT,
 } from '../common/fp';
@@ -148,15 +148,8 @@ app.get('/api/hello', (req, res) => {
   }
 });
 
-apiRegister(UnitT, '/api/ensure/:room', (_userUuid, params) => {
-  const { room } = params;
-  appState.ensureInstanceExists(room);
-  return UNIT;
-});
-
 apiRegister(t.string, '/api/create', (userUuid, _params) => {
-  const instance = appState.makeInstanceRandomName();
-  instance.setHost(userUuid);
+  const instance = appState.makeInstanceRandomName(userUuid);
   return instance.name();
 });
 
@@ -174,4 +167,14 @@ apiRegister(UnitOrErrorT, '/api/message/:room/:text', (userUuid, params) => pipe
     instance.sendMessage(userUuid, new s.MessageText(params.text));
     return UNIT;
   }),
+));
+
+apiRegister(orError(s.StateT), '/api/basestate/:room', (_userUuid, params) => pipe(
+  instanceFromRoom(params.room),
+  map((instance) => instance.baseState())
+));
+
+apiRegister(UnitOrErrorT, '/api/startgame/:room/', (userUuid, params) => pipe(
+  instanceFromRoom(params.room),
+  chain((instance) => instance.startGame(userUuid)),
 ));

@@ -1,56 +1,37 @@
 /** @jsx preactH */
-import { h as preactH, Component, ComponentChild, } from 'preact';
-import { InputChangeEvent, InputKeyPressEvent } from './event';
-import * as api from './api';
-import { orErrorUnwrap } from '../common/fp';
+import { h as preactH, Component, ComponentChild } from 'preact';
+import { isSome } from 'fp-ts/lib/Option';
+import * as s from '../common/state';
 
-export interface Props {
-  roomName: string;
-  currentValue: string | null;
-}
-
-interface State {
-  editValue: string;
-}
-
-export class NicknameComponent extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = {
-      editValue: props.currentValue === null ? '' : props.currentValue,
-    };
-  }
-
-  inputOnKeyPress(event: InputKeyPressEvent): void {
-    if (event.key === 'Enter') {
-      this.sendInputValue();
-    }
-  }
-
-  updateInputValue(event: InputChangeEvent): void {
-    this.setState({
-      editValue: event.currentTarget.value,
-    });
-  }
-
-  sendInputValue(): void {
-    if (this.state.editValue !== '') {
-      api.setNickname(this.props.roomName, this.state.editValue).then(orErrorUnwrap);
-    }
-  }
-
+export class Nickname extends Component<{nickname: s.Nickname}> {
   render(): ComponentChild {
-    return <div><div>nickname: <span style={ { fontWeight: 'bold' } }>
-        { this.props.currentValue === null ? '(none)' : this.props.currentValue }
-      </span></div>
-      <div>
-      <input
-        value={this.state.editValue}
-        onInput={(event: InputChangeEvent) => this.updateInputValue(event)}
-        onKeyPress={(event: InputKeyPressEvent) => this.inputOnKeyPress(event)}
-      >
-      </input>
-      <input type='button' value='Change Nickname!' onClick={() => this.sendInputValue()}></input>
-  </div></div>;
+    return <span>{this.props.nickname.toString()}</span>;
+  }
+}
+
+export class Anonymous extends Component<{userUuid: s.UserUuid}> {
+  render(): ComponentChild {
+    return <span>Anonymous ({this.props.userUuid.toString()})</span>;
+  }
+}
+
+export class NicknameOfUser extends Component<{user: s.User}> {
+  render(): ComponentChild {
+    if (isSome(this.props.user.nickname)) {
+      return <Nickname nickname={this.props.user.nickname.value}/>;
+    }
+    return <Anonymous userUuid={this.props.user.userUuid}/>;
+  }
+}
+
+export class NicknameOfUserPossiblyCurrent extends Component<{
+  user: s.User;
+  currentUserUuid: s.UserUuid;
+}> {
+  render(): ComponentChild {
+    if (this.props.user.userUuid.eq(this.props.currentUserUuid)) {
+      return <strong><em><NicknameOfUser user={this.props.user}/></em></strong>;
+    }
+    return <strong><NicknameOfUser user={this.props.user}/></strong>;
   }
 }

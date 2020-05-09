@@ -71,6 +71,14 @@ export function mkSetHost(
   return { tag: 'SetHost', userUuid };
 }
 
+export const StartGameT = t.type({
+  tag: t.literal('StartGame'),
+});
+export type StartGame = t.TypeOf<typeof StartGameT>;
+export function mkStartGame(): StartGame {
+  return { tag: 'StartGame' };
+}
+
 export const UpdateT = t.union([
   AddChatMessageT,
   SetNicknameT,
@@ -78,5 +86,6 @@ export const UpdateT = t.union([
   AddUserT,
   RemoveUserT,
   SetHostT,
+  StartGameT,
 ], 'Update');
 export type Update = t.TypeOf<typeof UpdateT>;

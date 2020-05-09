@@ -5,10 +5,11 @@ import * as api from '../common/api';
 import {
   sanitizeError,
   UnitOrErrorT,
-  UnitT,
   UnitOrError,
   OrError,
+  orError,
 } from '../common/fp';
+import * as s from '../common/state';
 
 async function stringApiCall<A, O, I>(
   codec: t.Type<A, O, I>,
@@ -39,14 +40,18 @@ export function create(): Promise<OrError<string>> {
   return stringApiCall(t.string, 'create');
 }
 
-export function ensure(room: string): Promise<UnitOrError> {
-  return stringApiCall(UnitT, 'ensure', room);
-}
-
 export async function message(room: string, text: string): Promise<UnitOrError> {
   return flatten(await stringApiCall(UnitOrErrorT, 'message', room, text));
 }
 
 export async function setNickname(room: string, nickname: string): Promise<UnitOrError> {
   return flatten(await stringApiCall(UnitOrErrorT, 'setnickname', room, nickname));
+}
+
+export async function getBaseState(room: string): Promise<OrError<s.State>> {
+  return flatten(await stringApiCall(orError(s.StateT), 'basestate', room));
+}
+
+export async function startGame(room: string): Promise<UnitOrError> {
+  return flatten(await stringApiCall(UnitOrErrorT, 'startgame', room));
 }

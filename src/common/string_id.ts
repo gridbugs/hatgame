@@ -1,4 +1,5 @@
 import * as t from 'io-ts';
+import { Option, isSome } from 'fp-ts/lib/Option';
 
 export abstract class StringId {
   constructor(private readonly raw: string) {}
@@ -41,4 +42,11 @@ export function mkStringIdType<A extends StringId>(C: StringIdConstructor<A>):
     },
     (x) => x.toString()
   );
+}
+
+export function optionalToStringOr(s: Option<StringId>, def: string): string {
+  if (isSome(s)) {
+    return s.value.toString();
+  }
+  return def;
 }
