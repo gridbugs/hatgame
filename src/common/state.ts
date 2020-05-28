@@ -62,13 +62,33 @@ export function mkUser(userUuid: UserUuid): User {
   return { userUuid, nickname: none };
 }
 
+export const PlayingT = t.type({
+  turn: t.Integer,
+  turnOrder: tImmutable.list(UserUuid.t),
+  teams: tImmutable.map(t.string, t.Integer, 'object'),
+});
+export type Playing = t.TypeOf<typeof PlayingT>;
+export function mkPlaying(userUuids: i.List<UserUuid>): Playing {
+  const turn = 0;
+  // TODO: choose teams and arrange turn order to cycle through teams
+  const turnOrder = userUuids;
+  const teams = i.Map(
+    userUuids.map((userUuid) => userUuid.toString()).zip(i.Repeat(0, userUuids.size))
+  );
+  return { turn, turnOrder, teams };
+}
+
 export const PhaseT = t.union([
-  t.literal('Lobby'),
-  t.literal('Play'),
+  t.type({ tag: t.literal('Lobby') }),
+  t.type({ tag: t.literal('Playing'), state: PlayingT }),
 ]);
 export type Phase = t.TypeOf<typeof PhaseT>;
-export const PHASE_LOBBY: Phase = 'Lobby';
-export const PHASE_PLAY: Phase = 'Play';
+export function phaseLobby(): Phase {
+  return { tag: 'Lobby' };
+}
+export function phasePlaying(playing: Playing): Phase {
+  return { tag: 'Playing', state: playing };
+}
 
 export const StateT = t.type({
   host: UserUuid.t,
@@ -80,10 +100,53 @@ export type State = t.TypeOf<typeof StateT>;
 export function mkState(host: UserUuid): State {
   return {
     host,
-    phase: PHASE_LOBBY,
+    phase: phaseLobby(),
     users: i.Map(),
     chatMessages: i.List(),
   };
+}
+
+export function getUser(state: State, userUuid: UserUuid): User {
+  return pipe(
+    fp.mapGetOpt(state.users, userUuid.toString()),
+    getOrElse(() => mkUser(userUuid)),
+  );
+}
+
+export function getHostUser(state: State): User {
+  return getUser(state, state.host);
+}
+
+export function getNicknameOfUser(state: State, userUuid: UserUuid): Option<Nickname> {
+  return pipe(
+    fp.mapGetOpt(state.users, userUuid.toString()),
+    chain((user) => user.nickname),
+  );
+}
+
+export function allUsers(state: State): i.List<User> {
+  return i.List(state.users.values());
+}
+
+export function allUserUuids(state: State): i.List<UserUuid> {
+  return allUsers(state).map((user) => user.userUuid);
+}
+
+export function stateWithJustHost(state: State): State {
+  const users = state.users.filter(({ userUuid }) => userUuid.eq(state.host));
+  return {
+    ...mkState(state.host),
+    users,
+  };
+}
+
+export function getCurrentTurnUserUuid(playing: Playing): UserUuid {
+  return fp.indexedGetWrapping(playing.turnOrder, playing.turn);
+}
+
+// TODO: There should be a way to describe the type of State whose phase is Playing
+export function getCurrentTurnUser(state: State, playing: Playing): User {
+  return getUser(state, getCurrentTurnUserUuid(playing));
 }
 
 export function applyAddChatMessage(
@@ -137,7 +200,7 @@ export function applySetHost(state: State, { userUuid }: u.SetHost): State {
 export function applyStartGame(state: State, { tag: _ }: u.StartGame): State {
   return {
     ...state,
-    phase: PHASE_PLAY,
+    phase: phasePlaying(mkPlaying(allUserUuids(state))),
   };
 }
 
@@ -151,34 +214,4 @@ export function applyUpdate(state: State, update: u.Update): State {
     case 'SetHost': return applySetHost(state, update);
     case 'StartGame': return applyStartGame(state, update);
   }
-}
-
-export function getUser(state: State, userUuid: UserUuid): User {
-  return pipe(
-    fp.mapGetOpt(state.users, userUuid.toString()),
-    getOrElse(() => mkUser(userUuid)),
-  );
-}
-
-export function getHostUser(state: State): User {
-  return getUser(state, state.host);
-}
-
-export function getNicknameOfUser(state: State, userUuid: UserUuid): Option<Nickname> {
-  return pipe(
-    fp.mapGetOpt(state.users, userUuid.toString()),
-    chain((user) => user.nickname),
-  );
-}
-
-export function allUsers(state: State): i.List<User> {
-  return i.List(state.users.values());
-}
-
-export function stateWithJustHost(state: State): State {
-  const users = state.users.filter(({ userUuid }) => userUuid.eq(state.host));
-  return {
-    ...mkState(state.host),
-    users,
-  };
 }

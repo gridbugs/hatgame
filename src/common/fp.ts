@@ -12,6 +12,15 @@ export function mapGetOpt<K, V>(map: i.Map<K, V>, key: K): Option<V> {
   return some(value);
 }
 
+export function indexedGetWrapping<T>(collection: i.Collection.Indexed<T>, key: number): T {
+  const wrappedKey = key % collection.count();
+  const value = collection.get(wrappedKey, null);
+  if (value === null) {
+    throw new Error('unreachable');
+  }
+  return value;
+}
+
 export const UnitT = t.type({
   _tag: t.literal('Unit'),
 });

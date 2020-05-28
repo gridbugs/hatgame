@@ -4,11 +4,13 @@ import * as s from '../common/state';
 import WhoIsHost from './who_is_host';
 import UserList from './user_list';
 import Chat from './chat';
+import GameArea from './game_area';
 
 interface Props {
   roomName: string;
   userUuid: s.UserUuid;
   state: s.State;
+  playingState: s.Playing;
 }
 
 export default class Play extends Component<Props> {
@@ -21,7 +23,11 @@ export default class Play extends Component<Props> {
       <h1>The Hat Game: <a href={`/game/${this.props.roomName}`}>{this.props.roomName}</a></h1>
       <div style={ { display: 'flex' } }>
         <div style={ { width: '200em' } }>
-          game area placeholder
+          <GameArea
+            userUuid={this.props.userUuid}
+            playingState={this.props.playingState}
+            state={this.props.state}
+          />
         </div>
         <div>
           <WhoIsHost userUuid={this.props.userUuid} state={this.props.state}/>

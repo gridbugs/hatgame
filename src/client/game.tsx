@@ -45,16 +45,17 @@ interface Props {
 
 class Game extends Component<Props> {
   render(): ComponentChild {
-    switch (this.props.state.phase) {
+    switch (this.props.state.phase.tag) {
       case 'Lobby': return <Lobby
         roomName={this.props.roomName}
         userUuid={this.props.userUuid}
         state={this.props.state}
       />;
-      case 'Play': return <Play
+      case 'Playing': return <Play
         roomName={this.props.roomName}
         userUuid={this.props.userUuid}
         state={this.props.state}
+        playingState={this.props.state.phase.state}
       />;
     }
   }
