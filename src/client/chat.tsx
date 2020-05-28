@@ -1,5 +1,11 @@
 /** @jsx preactH */
-import { h as preactH, Component, ComponentChild } from 'preact';
+import {
+  h as preactH,
+  Component,
+  ComponentChild,
+  createRef,
+  RefObject,
+} from 'preact';
 import * as s from '../common/state';
 import { orErrorUnwrap } from '../common/fp';
 import { InputChangeEvent, InputKeyPressEvent } from './event';
@@ -41,11 +47,14 @@ interface State {
 }
 
 export default class Chat extends Component<Props, State> {
+  chatBox: RefObject<HTMLDivElement>;
+
   constructor(props: Props) {
     super(props);
     this.setState({
       inputValue: '',
     });
+    this.chatBox = createRef();
   }
 
   inputOnKeyPress(event: InputKeyPressEvent): void {
@@ -69,12 +78,27 @@ export default class Chat extends Component<Props, State> {
     }
   }
 
+  scrollToBottom(): void {
+    const chatBox = this.chatBox.current;
+    if (chatBox instanceof HTMLDivElement) {
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  }
+
+  componentDidMount(): void {
+    this.scrollToBottom();
+  }
+
+  componentDidUpdate(): void {
+    this.scrollToBottom();
+  }
+
   render(): ComponentChild {
     return <div>
       <div style={ {
         ...this.props.dimensions,
         overflow: 'scroll',
-      } } >
+      } } ref={this.chatBox} >
       <ul style={ {
         'list-style-type': 'none',
         margin: '0px',
