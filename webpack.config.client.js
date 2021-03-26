@@ -5,7 +5,7 @@ const ESLintPlugin = require('eslint-webpack-plugin');
 module.exports = (env, argv) => {
   return {
     entry: {
-      test: path.resolve('.', 'src', 'client', 'test.tsx'),
+      game: path.resolve('.', 'src', 'client', 'game.tsx'),
     },
     devtool: argv.mode === 'production' ? 'false' : 'inline-source-map',
     module: {
@@ -25,9 +25,9 @@ module.exports = (env, argv) => {
     },
     plugins: [
       new HtmlWebpackPlugin({
-        template: './static/test.html',
-        filename: 'test.html',
-        chunks: ['test'],
+        template: './static/game.html',
+        filename: 'game.html',
+        chunks: ['game'],
       }),
       new ESLintPlugin({
         files: 'src/client/**',

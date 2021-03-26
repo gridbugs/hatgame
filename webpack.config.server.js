@@ -30,7 +30,7 @@ module.exports = (env, argv) => {
     },
     plugins: [
       new ESLintPlugin({
-        files: 'src/server/**',
+        files: ['src/server/**', 'src/common/**'],
         fix: true,
       }),
     ],
