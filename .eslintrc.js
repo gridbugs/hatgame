@@ -50,5 +50,6 @@ module.exports = {
     'no-useless-constructor': 'off',
     'default-case': 'off',
     'consistent-return': 'off',
+    'max-len': ['error', { 'code': 120 }],
   },
 };

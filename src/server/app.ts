@@ -7,6 +7,9 @@ import socketIo from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 import { option, either } from 'fp-ts';
 import * as m from '../common/message';
+import * as s from './app_state';
+
+console.log(s);
 
 function getPort(): number {
   const port = process.env.PORT;
