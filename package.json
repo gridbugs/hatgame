@@ -43,6 +43,8 @@
     "immutable": "^4.0.0-rc.12",
     "io-ts": "^2.2.16",
     "preact": "^10.5.13",
+    "react-redux": "^7.2.3",
+    "redux": "^4.0.5",
     "socket.io": "^4.0.0",
     "socket.io-client": "^4.0.0",
     "ts-loader": "^8.0.18",
