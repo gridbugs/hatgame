@@ -1,24 +1,40 @@
 import * as t from 'io-ts';
 
 export const AddChatMessageT = t.type({
-  tag: t.literal('AddChatMessage'),
   text: t.string,
 });
 export type AddChatMessage = t.TypeOf<typeof AddChatMessageT>;
-export function mkAddChatMessage(text: string): AddChatMessage {
-  return { tag: 'AddChatMessage', text };
-}
 
 export const AddWordT = t.type({
-  tag: t.literal('AddWord'),
-  text: t.string,
+  word: t.string,
 });
 export type AddWord = t.TypeOf<typeof AddWordT>;
-export function mkAddWord(text: string): AddWord {
-  return { tag: 'AddWord', text };
-}
 
 export const MessageT = t.union([
-  AddChatMessageT,
-  AddWordT,
+  t.type({
+    tag: t.literal('AddChatMessage'),
+    content: AddChatMessageT,
+  }),
+  t.type({
+    tag: t.literal('AddWord'),
+    content: AddWordT,
+  }),
 ]);
+export type Message = t.TypeOf<typeof MessageT>;
+
+export function mkAddChatMessage(text: string): Message {
+  return { tag: 'AddChatMessage', content: { text } };
+}
+export function mkAddWord(word: string): Message {
+  return { tag: 'AddWord', content: { word } };
+}
+
+export const MessageForRoomT = t.type({
+  message: MessageT,
+  room: t.string,
+});
+export type MessageForRoom = t.TypeOf<typeof MessageForRoomT>;
+
+export function encodeMessageForRoom(room: string, message: Message): any {
+  return MessageForRoomT.encode({ room, message });
+}

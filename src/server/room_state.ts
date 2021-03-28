@@ -44,13 +44,13 @@ export type LobbyState = {
 
 export type GameStateOrLobby = { tag: 'Lobby', state: LobbyState } | { tag: 'Game', state: GameState };
 
-export type AppStateObject = {
+export type RoomStateObject = {
   usersByUuid: UsersByUuid,
   chat: Chat,
   gameStateOrLobby: GameStateOrLobby,
 };
 
-export class AppState {
+export class RoomState {
   private readonly usersByUuid: UsersByUuid;
 
   private readonly chat: Chat;
@@ -61,13 +61,13 @@ export class AppState {
     usersByUuid,
     chat,
     gameStateOrLobby,
-  } : AppStateObject) {
+  } : RoomStateObject) {
     this.usersByUuid = usersByUuid;
     this.chat = chat;
     this.gameStateOrLobby = gameStateOrLobby;
   }
 
-  private toObject(): AppStateObject {
+  private toObject(): RoomStateObject {
     return {
       usersByUuid: this.usersByUuid,
       chat: this.chat,
@@ -75,21 +75,26 @@ export class AppState {
     };
   }
 
-  public static empty: AppState = new AppState({
+  public static empty: RoomState = new RoomState({
     usersByUuid: i.Map(),
     chat: i.List(),
     gameStateOrLobby: { tag: 'Lobby', state: { wordsByUserUuid: i.Map() } },
   });
 
-  public addUser(user: User): either.Either<'GameIsInProgress' | 'UserUuidAlreadyExists', AppState> {
+  public addUser(user: User):
+    either.Either<'GameIsInProgress' | 'UserUuidAlreadyExists' | 'NameAlreadyExists', RoomState> {
     switch (this.gameStateOrLobby.tag) {
       case 'Game': return either.left('GameIsInProgress');
       case 'Lobby': {
         if (this.usersByUuid.has(user.uuid)) {
           return either.left('UserUuidAlreadyExists');
         }
+        const nameAlreadyExists = this.usersByUuid.valueSeq().find((existingUser) => existingUser.name === user.name);
+        if (nameAlreadyExists) {
+          return either.left('NameAlreadyExists');
+        }
         const usersByUuid = this.usersByUuid.set(user.uuid, user);
-        return either.right(new AppState({
+        return either.right(new RoomState({
           ...this.toObject(),
           usersByUuid,
         }));
@@ -98,7 +103,7 @@ export class AppState {
   }
 
   public setUserName(userUuid: UserUuid, name: string):
-    either.Either<'GameIsInProgress' | 'UserUuidDoesNotExist' | 'NameAlreadyExists', AppState> {
+    either.Either<'GameIsInProgress' | 'UserUuidDoesNotExist' | 'NameAlreadyExists', RoomState> {
     switch (this.gameStateOrLobby.tag) {
       case 'Game': return either.left('GameIsInProgress');
       case 'Lobby': {
@@ -112,7 +117,7 @@ export class AppState {
           return either.left('NameAlreadyExists');
         }
         const usersByUuid = this.usersByUuid.set(currentUser.uuid, { ...currentUser, name });
-        return either.right(new AppState({
+        return either.right(new RoomState({
           ...this.toObject(),
           usersByUuid,
         }));
@@ -120,15 +125,15 @@ export class AppState {
     }
   }
 
-  public addChatMessage(chatMessage: ChatMessage): AppState {
-    return new AppState({
+  public addChatMessage(chatMessage: ChatMessage): RoomState {
+    return new RoomState({
       ...this.toObject(),
       chat: this.chat.push(chatMessage),
     });
   }
 
   public addWord(userUuid: UserUuid, word: Word):
-    either.Either<'GameIsInProgress' | 'UserDoesNotExist' | 'WordAlreadyExists', AppState> {
+    either.Either<'GameIsInProgress' | 'UserDoesNotExist' | 'WordAlreadyExists', RoomState> {
     switch (this.gameStateOrLobby.tag) {
       case 'Game': return either.left('GameIsInProgress');
       case 'Lobby': {
@@ -139,7 +144,7 @@ export class AppState {
         if (userWords.has(word)) {
           return either.left('WordAlreadyExists');
         }
-        return either.right(new AppState({
+        return either.right(new RoomState({
           ...this.toObject(),
           gameStateOrLobby: {
             tag: 'Lobby',

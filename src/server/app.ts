@@ -7,9 +7,9 @@ import socketIo from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 import { option, either } from 'fp-ts';
 import * as m from '../common/message';
-import * as s from './app_state';
+import { RoomState } from './room_state';
 
-console.log(s);
+console.log(RoomState);
 
 function getPort(): number {
   const port = process.env.PORT;
@@ -99,15 +99,16 @@ io.on('connection', (socket) => {
   if (option.isSome(sessionUuidOption)) {
     const sessionUuid = sessionUuidOption.value;
     socket.on('message', (messageEncoded) => {
-      const messageEither = m.MessageT.decode(messageEncoded);
+      const messageEither = m.MessageForRoomT.decode(messageEncoded);
       if (either.isRight(messageEither)) {
-        const message = messageEither.right;
+        const { room, message } = messageEither.right;
+        console.log(room);
         switch (message.tag) {
           case 'AddChatMessage':
-            handleAddChatMessage(sessionUuid, message);
+            handleAddChatMessage(sessionUuid, message.content);
             break;
           case 'AddWord':
-            handleAddWord(sessionUuid, message);
+            handleAddWord(sessionUuid, message.content);
             break;
         }
       }

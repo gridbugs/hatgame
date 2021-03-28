@@ -28,7 +28,7 @@ window.onload = async () => {
           <div id="chat-log"></div>
           <input id="chat-input"></input>
           <input type="button" value="Send" onClick={() => {
-            socket.emit('message', m.AddChatMessageT.encode(m.mkAddChatMessage('Hello, World!')));
+            socket.emit('message', m.encodeMessageForRoom('foo', m.mkAddChatMessage('Hello, World!')));
           }}></input>
         </div>
       </Provider>,
