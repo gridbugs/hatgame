@@ -81,42 +81,17 @@ export class RoomState {
     gameStateOrLobby: { tag: 'Lobby', state: { wordsByUserUuid: i.Map() } },
   });
 
-  public addUser(user: User):
-    either.Either<'GameIsInProgress' | 'UserUuidAlreadyExists' | 'NameAlreadyExists', RoomState> {
+  public ensureUserInRoomWithName(userUuid: UserUuid, name: string):
+    either.Either<'GameIsInProgress' | 'NameAlreadyExists', RoomState> {
     switch (this.gameStateOrLobby.tag) {
       case 'Game': return either.left('GameIsInProgress');
       case 'Lobby': {
-        if (this.usersByUuid.has(user.uuid)) {
-          return either.left('UserUuidAlreadyExists');
-        }
-        const nameAlreadyExists = this.usersByUuid.valueSeq().find((existingUser) => existingUser.name === user.name);
-        if (nameAlreadyExists) {
-          return either.left('NameAlreadyExists');
-        }
-        const usersByUuid = this.usersByUuid.set(user.uuid, user);
-        return either.right(new RoomState({
-          ...this.toObject(),
-          usersByUuid,
-        }));
-      }
-    }
-  }
-
-  public setUserName(userUuid: UserUuid, name: string):
-    either.Either<'GameIsInProgress' | 'UserUuidDoesNotExist' | 'NameAlreadyExists', RoomState> {
-    switch (this.gameStateOrLobby.tag) {
-      case 'Game': return either.left('GameIsInProgress');
-      case 'Lobby': {
-        const currentUser = this.usersByUuid.get(userUuid);
-        if (currentUser === undefined) {
-          return either.left('UserUuidDoesNotExist');
-        }
         const nameAlreadyExists = this.usersByUuid.valueSeq()
-          .find((existingUser) => existingUser.name === name && existingUser.uuid !== currentUser.uuid);
+          .find((existingUser) => existingUser.name === name && existingUser.uuid !== userUuid);
         if (nameAlreadyExists) {
           return either.left('NameAlreadyExists');
         }
-        const usersByUuid = this.usersByUuid.set(currentUser.uuid, { ...currentUser, name });
+        const usersByUuid = this.usersByUuid.set(userUuid, { uuid: userUuid, name });
         return either.right(new RoomState({
           ...this.toObject(),
           usersByUuid,
@@ -125,11 +100,14 @@ export class RoomState {
     }
   }
 
-  public addChatMessage(chatMessage: ChatMessage): RoomState {
-    return new RoomState({
+  public addChatMessage(chatMessage: ChatMessage): either.Either<'UserDoesNotExist', RoomState> {
+    if (!this.usersByUuid.has(chatMessage.userUuid)) {
+      return either.left('UserDoesNotExist');
+    }
+    return either.right(new RoomState({
       ...this.toObject(),
       chat: this.chat.push(chatMessage),
-    });
+    }));
   }
 
   public addWord(userUuid: UserUuid, word: Word):
@@ -137,10 +115,10 @@ export class RoomState {
     switch (this.gameStateOrLobby.tag) {
       case 'Game': return either.left('GameIsInProgress');
       case 'Lobby': {
-        const userWords = this.gameStateOrLobby.state.wordsByUserUuid.get(userUuid);
-        if (userWords === undefined) {
+        if (!this.usersByUuid.has(userUuid)) {
           return either.left('UserDoesNotExist');
         }
+        const userWords = this.gameStateOrLobby.state.wordsByUserUuid.get(userUuid, i.Set());
         if (userWords.has(word)) {
           return either.left('WordAlreadyExists');
         }

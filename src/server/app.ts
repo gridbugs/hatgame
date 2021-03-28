@@ -6,10 +6,11 @@ import sharedSession from 'express-socket.io-session';
 import socketIo from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 import { option, either } from 'fp-ts';
+import { either as mkEitherT } from 'io-ts-types/lib/either';
+import * as t from 'io-ts';
 import * as m from '../common/message';
-import { RoomState } from './room_state';
-
-console.log(RoomState);
+import * as e from '../common/error';
+import { AppState } from './app_state';
 
 function getPort(): number {
   const port = process.env.PORT;
@@ -77,41 +78,71 @@ io.use(sharedSession(session, { autoSave: true }));
 
 app.use('/static', express.static(__dirname));
 
-app.get('/game/:game', (req, res) => {
-  const _sessionUuid = getUuidGeneratingIfNotDefined(req.session);
+app.get('/game/:game', (_req, res) => {
   res.sendFile(path.resolve(__dirname, 'game.html'));
+});
+
+let appState = AppState.empty;
+
+app.get('/api/:message', (req, res) => {
+  console.log(req.params.message);
+  let messageObject;
+  try {
+    messageObject = JSON.parse(req.params.message);
+  } catch {
+    res.send(mkEitherT(e.ErrorT, t.string).encode(either.left({ tag: 'JsonParsingFailed' })));
+    return;
+  }
+  const messageEither = m.MessageForRoomT.decode(messageObject);
+  let requestResult: either.Either<e.Error, 'ok'> = either.right('ok');
+  if (either.isRight(messageEither)) {
+    const userUuid = getUuidGeneratingIfNotDefined(req.session);
+    const { room, message } = messageEither.right;
+    appState = appState.updateRoomState(room, (roomState) => {
+      console.log(message);
+      switch (message.tag) {
+        case 'EnsureUserInRoomWithName': {
+          const result = roomState.ensureUserInRoomWithName(userUuid, message.content.name);
+          if (either.isLeft(result)) {
+            requestResult = either.left({ tag: result.left });
+            return roomState;
+          }
+          return result.right;
+        }
+        case 'AddChatMessage': {
+          const result = roomState.addChatMessage({ userUuid, text: message.content.text });
+          if (either.isLeft(result)) {
+            requestResult = either.left({ tag: result.left });
+            return roomState;
+          }
+          return result.right;
+        }
+        case 'AddWord': {
+          const result = roomState.addWord(userUuid, message.content.word);
+          if (either.isLeft(result)) {
+            requestResult = either.left({ tag: result.left });
+            return roomState;
+          }
+          return result.right;
+        }
+      }
+    });
+  } else {
+    requestResult = either.left({ tag: 'DecodingFailed' });
+  }
+  console.log(requestResult);
+  console.log(JSON.stringify(appState, null, ' '));
+  res.send(mkEitherT(e.ErrorT, t.literal('ok')).encode(requestResult));
 });
 
 server.listen(port, () => {
   console.log(`Listening on port ${port}`);
 });
 
-function handleAddChatMessage(uuid: string, message: m.AddChatMessage): void {
-  console.log(uuid, message);
-}
-
-function handleAddWord(uuid: string, message: m.AddWord): void {
-  console.log(uuid, message);
-}
-
 io.on('connection', (socket) => {
-  const sessionUuidOption = socketIOSessionUuid(socket);
-  if (option.isSome(sessionUuidOption)) {
-    const sessionUuid = sessionUuidOption.value;
-    socket.on('message', (messageEncoded) => {
-      const messageEither = m.MessageForRoomT.decode(messageEncoded);
-      if (either.isRight(messageEither)) {
-        const { room, message } = messageEither.right;
-        console.log(room);
-        switch (message.tag) {
-          case 'AddChatMessage':
-            handleAddChatMessage(sessionUuid, message.content);
-            break;
-          case 'AddWord':
-            handleAddWord(sessionUuid, message.content);
-            break;
-        }
-      }
-    });
+  const userUuidOption = socketIOSessionUuid(socket);
+  if (option.isSome(userUuidOption)) {
+    const userUuid = userUuidOption.value;
+    console.log(`socket connect: ${userUuid}`);
   }
 });
