@@ -1,21 +1,11 @@
 import * as i from 'immutable';
 import { either } from 'fp-ts';
+import {
+  UserUuid, UsersByUuid, ChatMessage, Chat
+} from '../common/state';
+import * as m from '../common/model';
 
-export type UserUuid = string;
-
-export type User = {
-  readonly name: string,
-  readonly uuid: UserUuid,
-};
-
-export type UsersByUuid = i.Map<UserUuid, User>;
-
-export type ChatMessage = {
-  readonly userUuid: UserUuid,
-  readonly text: string,
-};
-
-export type Chat = i.List<ChatMessage>;
+export * from '../common/state';
 
 export type Team = i.List<UserUuid>;
 
@@ -135,5 +125,12 @@ export class RoomState {
         }));
       }
     }
+  }
+
+  public toModelLoby(): m.Lobby {
+    return {
+      usersByUuid: this.usersByUuid,
+      chat: this.chat,
+    };
   }
 }

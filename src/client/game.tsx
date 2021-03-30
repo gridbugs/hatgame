@@ -1,15 +1,17 @@
 /** @jsx preactH */
 import {
   h as preactH,
+  ComponentChild,
+  Component,
   render,
 } from 'preact';
-//import io from 'socket.io-client';
+import io from 'socket.io-client';
 import { Provider } from 'react-redux';
 import { createStore, Action } from 'redux';
-import { either as mkEitherT } from 'io-ts-types/lib/either';
-import * as t from 'io-ts';
 import { either } from 'fp-ts';
-import * as e from '../common/error';
+import * as i from 'immutable';
+import { Chat, sendMessage } from './chat';
+import * as mo from '../common/model';
 import * as m from '../common/message';
 
 type AppAction = string;
@@ -21,30 +23,64 @@ function rootReducer(_state: AppState | undefined, _action: Action<AppAction>): 
 
 const store = createStore(rootReducer);
 
-async function sendMessage(message: m.Message): Promise<t.Validation<either.Either<e.Error, 'ok'>>> {
-  const messageEncoded = m.encodeMessageForRoom('foo', message);
-  const messageEscaped = encodeURIComponent(JSON.stringify(messageEncoded));
-  const result = await (await fetch(`/api/${messageEscaped}`)).json();
-  return mkEitherT(e.ErrorT, t.literal('ok')).decode(result);
+type Props = {
+  currentUserUuid: string,
+};
+
+type State = {
+  lobby: mo.Lobby,
+};
+
+class App extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.setState({
+      lobby: {
+        usersByUuid: i.Map(),
+        chat: i.List(),
+      },
+    });
+    const socket = io('/foo');
+    socket.on('connect', () => {
+      console.log(socket.id);
+    });
+    socket.on('update', (lobbyEncoded: any) => {
+      const lobbyEither = mo.LobbyT.decode(lobbyEncoded);
+      if (either.isRight(lobbyEither)) {
+        const lobby = lobbyEither.right;
+        console.log(lobby);
+        this.setState({ lobby });
+      }
+    });
+  }
+
+  render(): ComponentChild {
+    return <Chat
+      currentUserUuid={this.props.currentUserUuid}
+      chat={this.state.lobby.chat}
+      usersByUuid={this.state.lobby.usersByUuid}
+    />;
+  }
 }
 
 window.onload = async () => {
+  const currentUserUuid = await (await fetch('/query/current-user-uuid')).text();
   const container = document.getElementById('container');
   if (container !== null) {
-    //const socket = io();
+    const socket = io('/foo');
+    socket.on('connect', () => {
+      console.log(socket.id);
+    });
+    socket.on('update', (state: any) => {
+      console.log(state);
+    });
+    console.log(await sendMessage(m.mkEnsureUserInRoomWithName({
+      name: `steve${Math.floor(Math.random() * 1000)}`,
+    })));
     render(
       <Provider store={store}>
         <div>
-          <h2>hi</h2>
-          <div id="chat-log"></div>
-          <input id="chat-input"></input>
-          <input type="button" value="Send" onClick={async () => {
-            console.log(await sendMessage(m.mkEnsureUserInRoomWithName({ name: 'steve' })));
-            console.log(await sendMessage(m.mkAddChatMessage({ text: 'hi' })));
-            console.log(await sendMessage(m.mkAddWord({ word: 'foo' })));
-            console.log(await sendMessage(m.mkAddWord({ word: 'bar' })));
-            console.log(await sendMessage(m.mkAddWord({ word: 'foo' })));
-          }}></input>
+          <App currentUserUuid={currentUserUuid} />
         </div>
       </Provider>,
       container

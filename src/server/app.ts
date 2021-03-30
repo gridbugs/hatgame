@@ -9,6 +9,7 @@ import { option, either } from 'fp-ts';
 import { either as mkEitherT } from 'io-ts-types/lib/either';
 import * as t from 'io-ts';
 import * as m from '../common/message';
+import * as mo from '../common/model';
 import * as e from '../common/error';
 import { AppState } from './app_state';
 
@@ -70,7 +71,7 @@ const session = expressSession({
   saveUninitialized: true,
   cookie: { maxAge: 24 * 60 * 60 * 1000 }, // 1 day
 });
-const _socketSession = sharedSession(session, { autoSave: true });
+const socketSession = sharedSession(session, { autoSave: true });
 
 app.use(session);
 
@@ -78,13 +79,42 @@ io.use(sharedSession(session, { autoSave: true }));
 
 app.use('/static', express.static(__dirname));
 
-app.get('/game/:game', (_req, res) => {
+let appState = AppState.empty;
+const socketNamespacesByRoomName: Map<string, socketIo.Namespace> = new Map();
+
+app.get('/game/:game', (req, res) => {
+  const room = req.params.game;
+  if (room !== undefined) {
+    if (!socketNamespacesByRoomName.has(room)) {
+      const socketNamespace = io.of(room).use(socketSession);
+      socketNamespace.on('connection', (socket) => {
+        console.log(socket.id);
+        const userUuidOption = socketIOSessionUuid(socket);
+        if (option.isSome(userUuidOption)) {
+          const userUuid = userUuidOption.value;
+          console.log(`socket connect: ${userUuid}`);
+          const state = appState.getRoomState(room);
+          const model = mo.LobbyT.encode(state.toModelLoby());
+          socketNamespace.emit('update', model);
+        }
+      });
+      socketNamespacesByRoomName.set(room, socketNamespace);
+    }
+  }
   res.sendFile(path.resolve(__dirname, 'game.html'));
 });
 
-let appState = AppState.empty;
+app.get('/query/current-user-uuid', (req, res) => {
+  const userUuid = getUuidGeneratingIfNotDefined(req.session);
+  res.send(userUuid);
+});
 
-app.get('/api/:message', (req, res) => {
+app.get('/query/current-user-uuid', (req, res) => {
+  const userUuid = getUuidGeneratingIfNotDefined(req.session);
+  res.send(userUuid);
+});
+
+app.get('/message/:message', (req, res) => {
   console.log(req.params.message);
   let messageObject;
   try {
@@ -130,6 +160,17 @@ app.get('/api/:message', (req, res) => {
   } else {
     requestResult = either.left({ tag: 'DecodingFailed' });
   }
+  if (either.isRight(requestResult)) {
+    if (either.isRight(messageEither)) {
+      const { room } = messageEither.right;
+      const socketNamespace = socketNamespacesByRoomName.get(room);
+      if (socketNamespace !== undefined) {
+        const state = appState.getRoomState(room);
+        const model = mo.LobbyT.encode(state.toModelLoby());
+        socketNamespace.emit('update', model);
+      }
+    }
+  }
   console.log(requestResult);
   console.log(JSON.stringify(appState, null, ' '));
   res.send(mkEitherT(e.ErrorT, t.literal('ok')).encode(requestResult));
@@ -137,12 +178,4 @@ app.get('/api/:message', (req, res) => {
 
 server.listen(port, () => {
   console.log(`Listening on port ${port}`);
-});
-
-io.on('connection', (socket) => {
-  const userUuidOption = socketIOSessionUuid(socket);
-  if (option.isSome(userUuidOption)) {
-    const userUuid = userUuidOption.value;
-    console.log(`socket connect: ${userUuid}`);
-  }
 });

@@ -17,4 +17,8 @@ export class AppState {
       roomsByName: this.roomsByName.update(name, RoomState.empty, f),
     });
   }
+
+  public getRoomState(name: string): RoomState {
+    return this.roomsByName.get(name, RoomState.empty);
+  }
 }
