@@ -2,10 +2,10 @@ import * as i from 'immutable';
 import { either } from 'fp-ts';
 import {
   UserUuid, UsersByUuid, ChatMessage, Chat
-} from '../common/state';
+} from '../common/types';
 import * as m from '../common/model';
 
-export * from '../common/state';
+export * from '../common/types';
 
 export type Team = i.List<UserUuid>;
 
@@ -27,6 +27,7 @@ export type GameState = {
 };
 
 export type WordsByUserUuid = i.Map<UserUuid, i.Set<Word>>;
+const WordSetEmpty = i.Set();
 
 export type LobbyState = {
   readonly wordsByUserUuid: WordsByUserUuid,
@@ -90,13 +91,13 @@ export class RoomState {
     }
   }
 
-  public addChatMessage(chatMessage: ChatMessage): either.Either<'UserDoesNotExist', RoomState> {
-    if (!this.usersByUuid.has(chatMessage.userUuid)) {
+  public addChatMessage(chatUpdate: ChatMessage): either.Either<'UserDoesNotExist', RoomState> {
+    if (!this.usersByUuid.has(chatUpdate.userUuid)) {
       return either.left('UserDoesNotExist');
     }
     return either.right(new RoomState({
       ...this.toObject(),
-      chat: this.chat.push(chatMessage),
+      chat: this.chat.push(chatUpdate),
     }));
   }
 
@@ -108,7 +109,7 @@ export class RoomState {
         if (!this.usersByUuid.has(userUuid)) {
           return either.left('UserDoesNotExist');
         }
-        const userWords = this.gameStateOrLobby.state.wordsByUserUuid.get(userUuid, i.Set());
+        const userWords = this.gameStateOrLobby.state.wordsByUserUuid.get(userUuid, WordSetEmpty);
         if (userWords.has(word)) {
           return either.left('WordAlreadyExists');
         }
@@ -127,10 +128,26 @@ export class RoomState {
     }
   }
 
-  public toModelLoby(): m.Lobby {
-    return {
-      usersByUuid: this.usersByUuid,
-      chat: this.chat,
-    };
+  public toModel(): m.Model {
+    switch (this.gameStateOrLobby.tag) {
+      case 'Game': {
+        return {
+          tag: 'Game',
+          content: {
+            usersByUuid: this.usersByUuid,
+            chat: this.chat,
+          },
+        };
+      }
+      case 'Lobby': {
+        return {
+          tag: 'Lobby',
+          content: {
+            usersByUuid: this.usersByUuid,
+            chat: this.chat,
+          },
+        };
+      }
+    }
   }
 }

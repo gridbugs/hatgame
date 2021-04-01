@@ -4,17 +4,12 @@ import {
   Component,
   ComponentChild,
 } from 'preact';
-import * as t from 'io-ts';
-import { either as mkEitherT } from 'io-ts-types/lib/either';
-import { either } from 'fp-ts';
-import * as s from '../common/state';
-import * as m from '../common/message';
-import * as e from '../common/error';
+import { Chat, UsersByUuid } from '../../common/types';
+import { InputChangeEvent, InputKeyPressEvent } from '../input';
 
-type InputChangeEvent = preactH.JSX.TargetedEvent<HTMLInputElement, Event>;
-type InputKeyPressEvent = preactH.JSX.TargetedEvent<HTMLInputElement, KeyboardEvent>;
-
-class ChatMessage extends Component<{ userUuid: string, userName: string, text: string, currentUser: boolean }> {
+class ChatMessageComponent extends Component<
+  { userUuid: string, userName: string, text: string, currentUser: boolean }
+> {
   renderName(): ComponentChild {
     if (this.props.currentUser) {
       return <strong><em>{this.props.userName}</em></strong>;
@@ -40,18 +35,12 @@ type State = {
 
 type Props = {
   currentUserUuid: string,
-  chat: s.Chat,
-  usersByUuid: s.UsersByUuid,
+  chat: Chat,
+  usersByUuid: UsersByUuid,
+  sendChatMessage: (text: string) => Promise<void>,
 };
 
-export async function sendMessage(message: m.Message): Promise<t.Validation<either.Either<e.Error, 'ok'>>> {
-  const messageEncoded = m.encodeMessageForRoom('foo', message);
-  const messageEscaped = encodeURIComponent(JSON.stringify(messageEncoded));
-  const result = await (await fetch(`/message/${messageEscaped}`)).json();
-  return mkEitherT(e.ErrorT, t.literal('ok')).decode(result);
-}
-
-export class Chat extends Component<Props, State> {
+export class ChatComponent extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.setState({
@@ -73,7 +62,7 @@ export class Chat extends Component<Props, State> {
 
   async sendInputValue(): Promise<void> {
     if (this.state.inputValue !== '') {
-      await sendMessage(m.mkAddChatMessage({ text: this.state.inputValue }));
+      await this.props.sendChatMessage(this.state.inputValue);
       this.setState({
         inputValue: '',
       });
@@ -86,7 +75,7 @@ export class Chat extends Component<Props, State> {
         this.props.chat.map((message, key) => {
           const maybeUser = this.props.usersByUuid.get(message.userUuid);
           const userName = maybeUser === undefined ? 'unknown' : maybeUser.name;
-          return <ChatMessage
+          return <ChatMessageComponent
             key={key}
             userUuid={message.userUuid}
             userName={userName}

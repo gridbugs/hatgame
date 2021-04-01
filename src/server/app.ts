@@ -5,13 +5,12 @@ import expressSession from 'express-session';
 import sharedSession from 'express-socket.io-session';
 import socketIo from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
-import { option, either } from 'fp-ts';
-import { either as mkEitherT } from 'io-ts-types/lib/either';
-import * as t from 'io-ts';
-import * as m from '../common/message';
-import * as mo from '../common/model';
-import * as e from '../common/error';
+import { either } from 'fp-ts';
+import * as u from '../common/update';
+import * as m from '../common/model';
 import { AppState } from './app_state';
+import * as q from '../common/query';
+import { ModelUpdate } from '../common/model_update';
 
 function getPort(): number {
   const port = process.env.PORT;
@@ -51,15 +50,6 @@ function getUuidGeneratingIfNotDefined(session: any): string {
   return session.uuid;
 }
 
-function socketIOSessionUuid(socket: any): option.Option<string> {
-  if (socket.handshake !== undefined) {
-    if (socket.handshake.session !== undefined) {
-      return option.some(getUuidGeneratingIfNotDefined(socket.handshake.session));
-    }
-  }
-  return option.none;
-}
-
 const app = express();
 const server = http.createServer(app);
 const port = getPort();
@@ -73,107 +63,69 @@ const session = expressSession({
 });
 const socketSession = sharedSession(session, { autoSave: true });
 
+let appState = AppState.empty;
+
 app.use(session);
 
 io.use(sharedSession(session, { autoSave: true }));
 
+io.of(/\/.*/).use(socketSession).on('connection', (socket) => {
+  const room = socket.nsp.name.slice(1);
+  const state = appState.getRoomState(room);
+  const model = m.ModelT.encode(state.toModel());
+  socket.emit(ModelUpdate, model);
+});
+
 app.use('/static', express.static(__dirname));
 
-let appState = AppState.empty;
-const socketNamespacesByRoomName: Map<string, socketIo.Namespace> = new Map();
-
-app.get('/game/:game', (req, res) => {
-  const room = req.params.game;
-  if (room !== undefined) {
-    if (!socketNamespacesByRoomName.has(room)) {
-      const socketNamespace = io.of(room).use(socketSession);
-      socketNamespace.on('connection', (socket) => {
-        console.log(socket.id);
-        const userUuidOption = socketIOSessionUuid(socket);
-        if (option.isSome(userUuidOption)) {
-          const userUuid = userUuidOption.value;
-          console.log(`socket connect: ${userUuid}`);
-          const state = appState.getRoomState(room);
-          const model = mo.LobbyT.encode(state.toModelLoby());
-          socketNamespace.emit('update', model);
-        }
-      });
-      socketNamespacesByRoomName.set(room, socketNamespace);
-    }
-  }
+app.get('/game/:game', (_req, res) => {
   res.sendFile(path.resolve(__dirname, 'game.html'));
 });
 
-app.get('/query/current-user-uuid', (req, res) => {
+app.get(q.path('CurrentUserUuid'), (req, res) => {
   const userUuid = getUuidGeneratingIfNotDefined(req.session);
   res.send(userUuid);
 });
 
-app.get('/query/current-user-uuid', (req, res) => {
-  const userUuid = getUuidGeneratingIfNotDefined(req.session);
-  res.send(userUuid);
-});
-
-app.get('/message/:message', (req, res) => {
-  console.log(req.params.message);
-  let messageObject;
+app.get('/update/:update', (req, res) => {
+  let updateObject;
   try {
-    messageObject = JSON.parse(req.params.message);
+    updateObject = JSON.parse(req.params.update);
   } catch {
-    res.send(mkEitherT(e.ErrorT, t.string).encode(either.left({ tag: 'JsonParsingFailed' })));
+    res.send(u.UpdateResultT.encode(either.left({ tag: 'JsonParsingFailed' })));
     return;
   }
-  const messageEither = m.MessageForRoomT.decode(messageObject);
-  let requestResult: either.Either<e.Error, 'ok'> = either.right('ok');
-  if (either.isRight(messageEither)) {
+  const updateEither = u.UpdateForRoomT.decode(updateObject);
+  let requestResult = u.UpdateResultOk;
+  if (either.isRight(updateEither)) {
     const userUuid = getUuidGeneratingIfNotDefined(req.session);
-    const { room, message } = messageEither.right;
-    appState = appState.updateRoomState(room, (roomState) => {
-      console.log(message);
-      switch (message.tag) {
+    const { room, update } = updateEither.right;
+    const roomUpdateResult = appState.tryUpdateRoomState(room, (roomState) => {
+      switch (update.tag) {
         case 'EnsureUserInRoomWithName': {
-          const result = roomState.ensureUserInRoomWithName(userUuid, message.content.name);
-          if (either.isLeft(result)) {
-            requestResult = either.left({ tag: result.left });
-            return roomState;
-          }
-          return result.right;
+          return roomState.ensureUserInRoomWithName(userUuid, update.content.name);
         }
         case 'AddChatMessage': {
-          const result = roomState.addChatMessage({ userUuid, text: message.content.text });
-          if (either.isLeft(result)) {
-            requestResult = either.left({ tag: result.left });
-            return roomState;
-          }
-          return result.right;
+          return roomState.addChatMessage({ userUuid, text: update.content.text });
         }
         case 'AddWord': {
-          const result = roomState.addWord(userUuid, message.content.word);
-          if (either.isLeft(result)) {
-            requestResult = either.left({ tag: result.left });
-            return roomState;
-          }
-          return result.right;
+          return roomState.addWord(userUuid, update.content.word);
         }
       }
     });
+    if (either.isRight(roomUpdateResult)) {
+      const { appState: newAppState, roomState } = roomUpdateResult.right;
+      appState = newAppState;
+      const socketNamespace = io.of(room).use(socketSession);
+      const model = m.ModelT.encode(roomState.toModel());
+      socketNamespace.emit(ModelUpdate, model);
+    } else {
+      requestResult = either.left({ tag: 'UpdateFailed', reason: roomUpdateResult.left });
+    }
   } else {
     requestResult = either.left({ tag: 'DecodingFailed' });
   }
-  if (either.isRight(requestResult)) {
-    if (either.isRight(messageEither)) {
-      const { room } = messageEither.right;
-      const socketNamespace = socketNamespacesByRoomName.get(room);
-      if (socketNamespace !== undefined) {
-        const state = appState.getRoomState(room);
-        const model = mo.LobbyT.encode(state.toModelLoby());
-        socketNamespace.emit('update', model);
-      }
-    }
-  }
-  console.log(requestResult);
-  console.log(JSON.stringify(appState, null, ' '));
-  res.send(mkEitherT(e.ErrorT, t.literal('ok')).encode(requestResult));
+  res.send(u.UpdateResultT.encode(requestResult));
 });
 
 server.listen(port, () => {
