@@ -1,6 +1,8 @@
 import * as t from 'io-ts';
 import { ChatT, UsersByUuidT } from './types';
 
+export * from '../common/types';
+
 export const LobbyT = t.type({
   usersByUuid: UsersByUuidT,
   chat: ChatT,

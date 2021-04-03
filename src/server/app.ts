@@ -50,6 +50,15 @@ function getUuidGeneratingIfNotDefined(session: any): string {
   return session.uuid;
 }
 
+function socketIOSessionUuid(socket: any): string {
+  if (socket.handshake !== undefined) {
+    if (socket.handshake.session !== undefined) {
+      return getUuidGeneratingIfNotDefined(socket.handshake.session);
+    }
+  }
+  throw new Error('socket has no session information');
+}
+
 const app = express();
 const server = http.createServer(app);
 const port = getPort();
@@ -65,15 +74,27 @@ const socketSession = sharedSession(session, { autoSave: true });
 
 let appState = AppState.empty;
 
-const workspaces = io.of(/^\/\w+$/).use(socketSession);
+const socketNamespacePattern = /^\/room\/(\w+)$/;
+const workspaces = io.of(socketNamespacePattern).use(socketSession);
 
 workspaces.on('connection', (socket) => {
   const socketName = socket.nsp.name;
-  console.log(`new socket connection to: ${socketName}`);
-  const room = socketName.slice(1);
-  const state = appState.getRoomState(room);
-  const model = m.ModelT.encode(state.toModel());
-  socket.emit(ModelUpdate, model);
+  const matches = socketName.match(socketNamespacePattern);
+  if (matches === null) {
+    console.log(`unexpected socket namespace: ${socketName}`);
+    return;
+  }
+  const userUuid = socketIOSessionUuid(socket);
+  console.log(`new socket connection by [${userUuid} to: ${socketName}`);
+  const room = matches[1];
+  socket.join(userUuid);
+  socket.on(q.GetCurrentUserUuid, (callback) => {
+    callback(m.UserUuidT.encode(userUuid));
+  });
+  socket.on(q.GetModel, (callback) => {
+    const state = appState.getRoomState(room);
+    callback(m.ModelT.encode(state.toModel()));
+  });
 });
 
 app.use(session);
@@ -82,11 +103,6 @@ app.use('/static', express.static(__dirname));
 
 app.get('/game/:game', (_req, res) => {
   res.sendFile(path.resolve(__dirname, 'game.html'));
-});
-
-app.get(q.path('CurrentUserUuid'), (req, res) => {
-  const userUuid = getUuidGeneratingIfNotDefined(req.session);
-  res.send(userUuid);
 });
 
 app.get('/update/:update', (req, res) => {
@@ -119,9 +135,9 @@ app.get('/update/:update', (req, res) => {
       console.log(`applied update to [${room}] from [${userUuid}]: ${JSON.stringify(update)}`);
       const { appState: newAppState, roomState } = roomUpdateResult.right;
       appState = newAppState;
-      const socketName = `/${room}`;
+      const socketName = `/room/${room}`;
       console.log(`sending new model on socket: ${socketName}`);
-      const socketNamespace = io.of(socketName).use(socketSession);
+      const socketNamespace = io.of(socketName);
       const model = m.ModelT.encode(roomState.toModel());
       socketNamespace.emit(ModelUpdate, model);
     } else {

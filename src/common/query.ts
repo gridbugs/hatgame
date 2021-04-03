@@ -1,5 +1,2 @@
-export type Query = 'CurrentUserUuid';
-
-export function path(arg: Query): string {
-  return `/query/${arg}`;
-}
+export const GetCurrentUserUuid = 'GetCurrentUserUuid';
+export const GetModel = 'GetModel';
