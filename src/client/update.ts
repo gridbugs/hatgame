@@ -1,20 +1,11 @@
-import * as t from 'io-ts';
 import { either } from 'fp-ts';
 import { PathReporter } from 'io-ts/lib/PathReporter';
 import * as u from '../common/update';
 
-export async function sendUpdate(
-  { room, update }: { room: string, update: u.Update }
-): Promise<t.Validation<u.UpdateResult>> {
-  const updateEncoded = u.encodeUpdateForRoom(room, update);
-  const updateEscaped = encodeURIComponent(JSON.stringify(updateEncoded));
-  const result = await (await fetch(`/update/${updateEscaped}`)).json();
-  return u.UpdateResultT.decode(result);
-}
-
 export async function sendUpdateOrThrow(
   { room, update }: { room: string, update: u.Update }
 ): Promise<void> {
+  console.log(`sending update to [${room}]: ${JSON.stringify(update)}`);
   const updateEncoded = u.encodeUpdateForRoom(room, update);
   const updateEscaped = encodeURIComponent(JSON.stringify(updateEncoded));
   const resultEncoded = await (await fetch(`/update/${updateEscaped}`)).json();

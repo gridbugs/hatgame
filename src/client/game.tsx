@@ -33,11 +33,23 @@ function mkServerConnection(room: string): ServerConnectionInterface {
   return {
     sendUpdate: (update) => sendUpdateOrThrow({ room, update }),
     connect: (onModelUpdate: (model: m.Model) => void) => {
-      const socket = io(`/${room}`);
+      const socketNamespace = `/${room}`;
+      console.log(`connecting to socket: ${socketNamespace}`);
+      const socket = io(socketNamespace);
+      socket.on('connect', async () => {
+        console.log(`connected to socket: ${socketNamespace}`);
+        await sendUpdateOrThrow({
+          room,
+          update: u.mkEnsureUserInRoomWithName({
+            name: `steve${Math.floor(Math.random() * 1000)}`,
+          })
+        });
+      });
       socket.on(ModelUpdate, (modelEncoded: any) => {
         const modelEither = m.ModelT.decode(modelEncoded);
         if (either.isRight(modelEither)) {
           const model = modelEither.right;
+          console.log(`model update: ${JSON.stringify(model)}`);
           onModelUpdate(model);
         } else {
           const errorMessage = PathReporter.report(modelEither).join('');
@@ -62,12 +74,6 @@ window.onload = async () => {
   const serverConnection = mkServerConnection(room);
   const container = document.getElementById('container');
   if (container !== null) {
-    console.log(await sendUpdateOrThrow({
-      room,
-      update: u.mkEnsureUserInRoomWithName({
-        name: `steve${Math.floor(Math.random() * 0)}`,
-      })
-    }));
     render(
       <Provider store={store}>
         <div>

@@ -65,16 +65,18 @@ const socketSession = sharedSession(session, { autoSave: true });
 
 let appState = AppState.empty;
 
-app.use(session);
+const workspaces = io.of(/^\/\w+$/).use(socketSession);
 
-io.use(sharedSession(session, { autoSave: true }));
-
-io.of(/\/.*/).use(socketSession).on('connection', (socket) => {
-  const room = socket.nsp.name.slice(1);
+workspaces.on('connection', (socket) => {
+  const socketName = socket.nsp.name;
+  console.log(`new socket connection to: ${socketName}`);
+  const room = socketName.slice(1);
   const state = appState.getRoomState(room);
   const model = m.ModelT.encode(state.toModel());
   socket.emit(ModelUpdate, model);
 });
+
+app.use(session);
 
 app.use('/static', express.static(__dirname));
 
@@ -114,9 +116,12 @@ app.get('/update/:update', (req, res) => {
       }
     });
     if (either.isRight(roomUpdateResult)) {
+      console.log(`applied update to [${room}] from [${userUuid}]: ${JSON.stringify(update)}`);
       const { appState: newAppState, roomState } = roomUpdateResult.right;
       appState = newAppState;
-      const socketNamespace = io.of(room).use(socketSession);
+      const socketName = `/${room}`;
+      console.log(`sending new model on socket: ${socketName}`);
+      const socketNamespace = io.of(socketName).use(socketSession);
       const model = m.ModelT.encode(roomState.toModel());
       socketNamespace.emit(ModelUpdate, model);
     } else {
