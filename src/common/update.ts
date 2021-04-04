@@ -55,7 +55,6 @@ export function encodeUpdateForRoom(room: string, update: Update): any {
 
 export const UpdateErrorT = t.union([
   t.type({ tag: t.literal('DecodingFailed') }),
-  t.type({ tag: t.literal('JsonParsingFailed') }),
   t.type({
     tag: t.literal('UpdateFailed'),
     reason: t.union([

@@ -14,8 +14,8 @@ import {
   ServerConnectionInterfaceConnectCallbacks,
 } from './components/app';
 import * as m from '../common/model';
-import { sendUpdateOrThrow } from './update';
-import * as q from '../common/query';
+import { sendUpdate } from './update';
+import * as w from '../common/websocket_api';
 import { ModelUpdate } from '../common/model_update';
 import * as u from '../common/update';
 
@@ -28,41 +28,36 @@ function rootReducer(_state: AppState | undefined, _action: Action<AppAction>): 
 
 const store = createStore(rootReducer);
 
-function mkServerConnection(room: string): ServerConnectionInterface {
+function mkServerConnection(socket: SocketIOClient.Socket): ServerConnectionInterface {
   return {
-    sendUpdate: (update) => sendUpdateOrThrow({ room, update }),
+    sendUpdate: (update) => sendUpdate({ socket, update }),
     connect: ({ onInit, onModelUpdate }: ServerConnectionInterfaceConnectCallbacks) => {
-      const socketNamespace = `/room/${room}`;
-      console.log(`connecting to socket: ${socketNamespace}`);
-      const socket = io(socketNamespace);
-      socket.on('connect', async () => {
-        console.log(`connected to socket: ${socketNamespace}`);
-        socket.emit(q.GetCurrentUserUuid, (userUuidEncoded: any) => {
-          const userUuidEither = m.UserUuidT.decode(userUuidEncoded);
-          if (either.isRight(userUuidEither)) {
-            const userUuid = userUuidEither.right;
-            socket.emit(q.GetModel, async (modelEncoded: any) => {
-              const modelEither = m.ModelT.decode(modelEncoded);
-              if (either.isRight(modelEither)) {
-                const model = modelEither.right;
-                console.log(`model update: ${JSON.stringify(model)}`);
-                onInit({ currentUserUuid: userUuid, model });
-                await sendUpdateOrThrow({
-                  room,
-                  update: u.mkEnsureUserInRoomWithName({
-                    name: `steve${Math.floor(Math.random() * 1000)}`,
-                  })
-                });
-              } else {
-                const errorMessage = PathReporter.report(modelEither).join('');
-                throw new Error(errorMessage);
-              }
-            });
-          } else {
-            const errorMessage = PathReporter.report(userUuidEither).join('');
-            throw new Error(errorMessage);
-          }
-        });
+      socket.emit(w.GetCurrentUserUuid, (userUuidEncoded: any) => {
+        const userUuidEither = m.UserUuidT.decode(userUuidEncoded);
+        if (either.isRight(userUuidEither)) {
+          const userUuid = userUuidEither.right;
+          console.log(`current user uuid: ${userUuid}`);
+          socket.emit(w.GetModel, async (modelEncoded: any) => {
+            const modelEither = m.ModelT.decode(modelEncoded);
+            if (either.isRight(modelEither)) {
+              const model = modelEither.right;
+              console.log(`model update: ${JSON.stringify(model)}`);
+              onInit({ currentUserUuid: userUuid, model });
+              await sendUpdate({
+                socket,
+                update: u.mkEnsureUserInRoomWithName({
+                  name: `steve${Math.floor(Math.random() * 1000)}`,
+                })
+              });
+            } else {
+              const errorMessage = PathReporter.report(modelEither).join('');
+              throw new Error(errorMessage);
+            }
+          });
+        } else {
+          const errorMessage = PathReporter.report(userUuidEither).join('');
+          throw new Error(errorMessage);
+        }
       });
       socket.on(ModelUpdate, (modelEncoded: any) => {
         const modelEither = m.ModelT.decode(modelEncoded);
@@ -89,16 +84,21 @@ function roomNameFromUrl(): string {
 
 window.onload = async () => {
   const room = roomNameFromUrl();
-  const serverConnection = mkServerConnection(room);
   const container = document.getElementById('container');
   if (container !== null) {
-    render(
+    const socketNamespace = `/room/${room}`;
+    console.log(`connecting to socket: ${socketNamespace}`);
+    const socket = io(socketNamespace);
+    socket.on('connect', () => {
+      const serverConnection = mkServerConnection(socket);
+      render(
       <Provider store={store}>
         <div>
           <AppComponent serverConnection={serverConnection} />
         </div>
       </Provider>,
       container
-    );
+      );
+    });
   }
 };
