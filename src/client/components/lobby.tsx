@@ -21,7 +21,7 @@ export class LobbyComponent extends Component<Props> {
       <ChatComponent
         currentUserUuid={this.props.currentUserUuid}
         chat={this.props.lobby.chat}
-        usersByUuid={this.props.lobby.usersByUuid}
+        userNamesByUuid={this.props.lobby.userNamesByUuid}
         sendChatMessage={(text) => this.props.sendUpdate(u.mkAddChatMessage({ text }))}
       />
     </div>;

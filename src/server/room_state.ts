@@ -1,7 +1,7 @@
 import * as i from 'immutable';
 import { either } from 'fp-ts';
 import {
-  UserUuid, UsersByUuid, ChatMessage, Chat
+  UserUuid, UserNamesByUuid, ChatMessage, Chat
 } from '../common/types';
 import * as m from '../common/model';
 
@@ -36,38 +36,38 @@ export type LobbyState = {
 export type GameStateOrLobby = { tag: 'Lobby', state: LobbyState } | { tag: 'Game', state: GameState };
 
 export type RoomStateObject = {
-  usersByUuid: UsersByUuid,
+  userNamesByUuid: UserNamesByUuid,
   chat: Chat,
   gameStateOrLobby: GameStateOrLobby,
 };
 
 export class RoomState {
-  private readonly usersByUuid: UsersByUuid;
+  private readonly userNamesByUuid: UserNamesByUuid;
 
   private readonly chat: Chat;
 
   private readonly gameStateOrLobby: GameStateOrLobby;
 
   private constructor({
-    usersByUuid,
+    userNamesByUuid,
     chat,
     gameStateOrLobby,
   } : RoomStateObject) {
-    this.usersByUuid = usersByUuid;
+    this.userNamesByUuid = userNamesByUuid;
     this.chat = chat;
     this.gameStateOrLobby = gameStateOrLobby;
   }
 
   private toObject(): RoomStateObject {
     return {
-      usersByUuid: this.usersByUuid,
+      userNamesByUuid: this.userNamesByUuid,
       chat: this.chat,
       gameStateOrLobby: this.gameStateOrLobby,
     };
   }
 
   public static empty: RoomState = new RoomState({
-    usersByUuid: i.Map(),
+    userNamesByUuid: i.Map(),
     chat: i.List(),
     gameStateOrLobby: { tag: 'Lobby', state: { wordsByUserUuid: i.Map() } },
   });
@@ -77,22 +77,22 @@ export class RoomState {
     switch (this.gameStateOrLobby.tag) {
       case 'Game': return either.left('GameIsInProgress');
       case 'Lobby': {
-        const nameAlreadyExists = this.usersByUuid.valueSeq()
-          .find((existingUser) => existingUser.name === name && existingUser.uuid !== userUuid);
+        const nameAlreadyExists = this.userNamesByUuid
+          .find((existingUserName, existingUserUuid) => existingUserName === name && existingUserUuid !== userUuid);
         if (nameAlreadyExists) {
           return either.left('NameAlreadyExists');
         }
-        const usersByUuid = this.usersByUuid.set(userUuid, { uuid: userUuid, name });
+        const userNamesByUuid = this.userNamesByUuid.set(userUuid, name);
         return either.right(new RoomState({
           ...this.toObject(),
-          usersByUuid,
+          userNamesByUuid,
         }));
       }
     }
   }
 
   public addChatMessage(chatUpdate: ChatMessage): either.Either<'UserDoesNotExist', RoomState> {
-    if (!this.usersByUuid.has(chatUpdate.userUuid)) {
+    if (!this.userNamesByUuid.has(chatUpdate.userUuid)) {
       return either.left('UserDoesNotExist');
     }
     return either.right(new RoomState({
@@ -106,7 +106,7 @@ export class RoomState {
     switch (this.gameStateOrLobby.tag) {
       case 'Game': return either.left('GameIsInProgress');
       case 'Lobby': {
-        if (!this.usersByUuid.has(userUuid)) {
+        if (!this.userNamesByUuid.has(userUuid)) {
           return either.left('UserDoesNotExist');
         }
         const userWords = this.gameStateOrLobby.state.wordsByUserUuid.get(userUuid, WordSetEmpty);
@@ -134,7 +134,7 @@ export class RoomState {
         return {
           tag: 'Game',
           content: {
-            usersByUuid: this.usersByUuid,
+            userNamesByUuid: this.userNamesByUuid,
             chat: this.chat,
           },
         };
@@ -143,7 +143,7 @@ export class RoomState {
         return {
           tag: 'Lobby',
           content: {
-            usersByUuid: this.usersByUuid,
+            userNamesByUuid: this.userNamesByUuid,
             chat: this.chat,
           },
         };

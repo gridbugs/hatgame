@@ -22,7 +22,7 @@ export class GameComponent extends Component<Props> {
       <ChatComponent
         currentUserUuid={this.props.currentUserUuid}
         chat={this.props.game.chat}
-        usersByUuid={this.props.game.usersByUuid}
+        userNamesByUuid={this.props.game.userNamesByUuid}
         sendChatMessage={(text) => this.props.sendUpdate(u.mkAddChatMessage({ text }))}
       />
     </div>;

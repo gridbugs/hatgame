@@ -25,5 +25,5 @@ export const UserT = t.type({
 });
 export type User = t.TypeOf<typeof UserT>;
 
-export const UsersByUuidT = ti.map(UserUuidT, UserT);
-export type UsersByUuid = t.TypeOf<typeof UsersByUuidT>;
+export const UserNamesByUuidT = ti.map(UserUuidT, UserNameT);
+export type UserNamesByUuid = t.TypeOf<typeof UserNamesByUuidT>;

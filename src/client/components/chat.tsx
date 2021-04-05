@@ -4,7 +4,7 @@ import {
   Component,
   ComponentChild,
 } from 'preact';
-import { Chat, UsersByUuid } from '../../common/types';
+import { Chat, UserNamesByUuid } from '../../common/types';
 import { InputChangeEvent, InputKeyPressEvent } from '../input';
 
 class ChatMessageComponent extends Component<
@@ -36,7 +36,7 @@ type State = {
 type Props = {
   currentUserUuid: string,
   chat: Chat,
-  usersByUuid: UsersByUuid,
+  userNamesByUuid: UserNamesByUuid,
   sendChatMessage: (text: string) => Promise<void>,
 };
 
@@ -73,8 +73,8 @@ export class ChatComponent extends Component<Props, State> {
     return <div>
       {
         this.props.chat.map((message, key) => {
-          const maybeUser = this.props.usersByUuid.get(message.userUuid);
-          const userName = maybeUser === undefined ? 'unknown' : maybeUser.name;
+          const maybeUserName = this.props.userNamesByUuid.get(message.userUuid);
+          const userName = maybeUserName === undefined ? 'unknown' : maybeUserName;
           return <ChatMessageComponent
             key={key}
             userUuid={message.userUuid}

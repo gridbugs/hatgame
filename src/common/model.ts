@@ -1,16 +1,16 @@
 import * as t from 'io-ts';
-import { ChatT, UsersByUuidT } from './types';
+import { ChatT, UserNamesByUuidT } from './types';
 
 export * from '../common/types';
 
 export const LobbyT = t.type({
-  usersByUuid: UsersByUuidT,
+  userNamesByUuid: UserNamesByUuidT,
   chat: ChatT,
 });
 export type Lobby = t.TypeOf<typeof LobbyT>;
 
 export const GameT = t.type({
-  usersByUuid: UsersByUuidT,
+  userNamesByUuid: UserNamesByUuidT,
   chat: ChatT,
 });
 export type Game = t.TypeOf<typeof GameT>;
