@@ -33,7 +33,6 @@ function mkServerConnection(socket: SocketIOClient.Socket): ServerConnectionInte
     connect: ({ onInit, onModelUpdate }: ServerConnectionInterfaceConnectCallbacks) => {
       console.log('querying current user');
       socket.emit(w.GetCurrentUserUuid, (userUuidEncoded: any) => {
-        console.log('current user', userUuidEncoded);
         const userUuidEither = m.UserUuidT.decode(userUuidEncoded);
         if (either.isRight(userUuidEither)) {
           const userUuid = userUuidEither.right;
