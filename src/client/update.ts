@@ -3,7 +3,7 @@ import { PathReporter } from 'io-ts/lib/PathReporter';
 import * as u from '../common/update';
 import * as w from '../common/websocket_api';
 
-export async function sendUpdate(
+export async function sendUpdateSocketIO(
   { socket, update }: { socket: SocketIOClient.Socket, update: u.Update }
 ): Promise<void> {
   console.log(`sending update: ${JSON.stringify(update)}`);
@@ -31,4 +31,14 @@ export async function sendUpdate(
       }
     });
   });
+}
+
+export async function sendUpdateSocketHttp(
+  { room, update }: { room: string, update: u.Update }
+): Promise<void> {
+  console.log(`sending update: ${JSON.stringify(update)}`);
+  const updateEncoded = u.UpdateT.encode(update);
+  const updateEscaped = encodeURIComponent(JSON.stringify(updateEncoded));
+  const resultEncoded = await (await fetch(`/update/${room}/${updateEscaped}`)).json();
+  console.log(resultEncoded);
 }

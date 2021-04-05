@@ -6,6 +6,7 @@ module.exports = (env, argv) => {
   return {
     entry: {
       game: path.resolve('.', 'src', 'client', 'game.tsx'),
+      join: path.resolve('.', 'src', 'client', 'join.ts'),
     },
     devtool: argv.mode === 'production' ? 'false' : 'inline-source-map',
     module: {
@@ -32,6 +33,11 @@ module.exports = (env, argv) => {
         template: './static/game.html',
         filename: 'game.html',
         chunks: ['game'],
+      }),
+      new HtmlWebpackPlugin({
+        template: './static/join.html',
+        filename: 'join.html',
+        chunks: ['join'],
       }),
       new ESLintPlugin({
         files: 'src/client/**',

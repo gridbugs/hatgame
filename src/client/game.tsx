@@ -14,10 +14,9 @@ import {
   ServerConnectionInterfaceConnectCallbacks,
 } from './components/app';
 import * as m from '../common/model';
-import { sendUpdate } from './update';
+import { sendUpdateSocketIO } from './update';
 import * as w from '../common/websocket_api';
 import { ModelUpdate } from '../common/model_update';
-import * as u from '../common/update';
 
 type AppAction = string;
 type AppState = string;
@@ -30,25 +29,21 @@ const store = createStore(rootReducer);
 
 function mkServerConnection(socket: SocketIOClient.Socket): ServerConnectionInterface {
   return {
-    sendUpdate: (update) => sendUpdate({ socket, update }),
+    sendUpdate: (update) => sendUpdateSocketIO({ socket, update }),
     connect: ({ onInit, onModelUpdate }: ServerConnectionInterfaceConnectCallbacks) => {
+      console.log('querying current user');
       socket.emit(w.GetCurrentUserUuid, (userUuidEncoded: any) => {
+        console.log('current user', userUuidEncoded);
         const userUuidEither = m.UserUuidT.decode(userUuidEncoded);
         if (either.isRight(userUuidEither)) {
           const userUuid = userUuidEither.right;
           console.log(`current user uuid: ${userUuid}`);
-          socket.emit(w.GetModel, async (modelEncoded: any) => {
+          socket.emit(w.GetModel, (modelEncoded: any) => {
             const modelEither = m.ModelT.decode(modelEncoded);
             if (either.isRight(modelEither)) {
               const model = modelEither.right;
               console.log(`model update: ${JSON.stringify(model)}`);
               onInit({ currentUserUuid: userUuid, model });
-              await sendUpdate({
-                socket,
-                update: u.mkEnsureUserInRoomWithName({
-                  name: `steve${Math.floor(Math.random() * 1000)}`,
-                })
-              });
             } else {
               const errorMessage = PathReporter.report(modelEither).join('');
               throw new Error(errorMessage);
@@ -86,10 +81,9 @@ window.onload = async () => {
   const room = roomNameFromUrl();
   const container = document.getElementById('container');
   if (container !== null) {
-    const socketNamespace = `/room/${room}`;
-    console.log(`connecting to socket: ${socketNamespace}`);
-    const socket = io(socketNamespace);
+    const socket = io({ query: { room } });
     socket.on('connect', () => {
+      console.log('connected to socket');
       const serverConnection = mkServerConnection(socket);
       render(
       <Provider store={store}>

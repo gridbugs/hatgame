@@ -70,3 +70,6 @@ export type UpdateError = t.TypeOf<typeof UpdateErrorT>;
 export const UpdateResultT = mkEitherT(UpdateErrorT, t.literal('Ok'));
 export type UpdateResult = t.TypeOf<typeof UpdateResultT>;
 export const UpdateResultOk: UpdateResult = either.right('Ok');
+
+export const HttpUpdateResultT = mkEitherT(t.literal('JsonParsingFailed'), UpdateResultT);
+export type HttpUpdateResult = t.TypeOf<typeof HttpUpdateResultT>;

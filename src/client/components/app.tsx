@@ -47,7 +47,7 @@ export class AppComponent extends Component<Props, State> {
 
   render(): ComponentChild {
     switch (this.state.model.tag) {
-      case 'Null': return <div></div>;
+      case 'Null': return <div>reticulating splines...</div>;
       case 'Game': return <GameComponent
         currentUserUuid={this.state.currentUserUuid}
         game={this.state.model.content}

@@ -128,7 +128,7 @@ export class RoomState {
     }
   }
 
-  public toModel(): m.Model {
+  public toModel(_currentUserUuid: UserUuid): m.Model {
     switch (this.gameStateOrLobby.tag) {
       case 'Game': {
         return {
