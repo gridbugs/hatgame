@@ -1,6 +1,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const ESLintPlugin = require('eslint-webpack-plugin');
+const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = (env, argv) => {
   return {
@@ -42,6 +43,11 @@ module.exports = (env, argv) => {
       new ESLintPlugin({
         files: 'src/client/**',
         fix: true,
+      }),
+      new CopyPlugin({
+        patterns: [
+          { from: './static/favicon.ico' },
+        ],
       }),
     ],
     output: {

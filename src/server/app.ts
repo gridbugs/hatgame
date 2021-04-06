@@ -11,6 +11,7 @@ import * as m from '../common/model';
 import { AppState } from './app_state';
 import * as w from '../common/websocket_api';
 import { ModelUpdate } from '../common/model_update';
+import * as debug from './debug';
 
 function getPort(): number {
   const port = process.env.PORT;
@@ -26,6 +27,14 @@ function isDevelopment(): boolean {
     return true;
   }
   return false;
+}
+
+async function debugDelay(): Promise<void> {
+  const delayMillisString = process.env.DELAY_MILLIS;
+  if (typeof delayMillisString === 'string') {
+    const delayMillis = parseInt(delayMillisString, 10);
+    await debug.delay(delayMillis);
+  }
 }
 
 function memorySessionStore(): expressSession.MemoryStore {
@@ -120,14 +129,17 @@ io.use(socketSession).on('connection', (socket: socketIo.Socket) => {
     console.log(`new socket connection by [${userUuid} to ${room}`);
     socket.join(`/user/${userUuid}`);
     socket.join(`/room/${room}`);
-    socket.on(w.GetCurrentUserUuid, (callback) => {
+    socket.on(w.GetCurrentUserUuid, async (callback) => {
+      await debugDelay();
       callback(m.UserUuidT.encode(userUuid));
     });
-    socket.on(w.GetModel, (callback) => {
+    socket.on(w.GetModel, async (callback) => {
+      await debugDelay();
       const state = appState.getRoomState(room);
       callback(m.ModelT.encode(state.toModel(userUuid)));
     });
-    socket.on(w.Update, (updateEncoded: any, callback) => {
+    socket.on(w.Update, async (updateEncoded: any, callback) => {
+      await debugDelay();
       const result = tryApplyEncodedUpdate({ room, userUuid, updateEncoded });
       callback(result);
     });
@@ -144,8 +156,11 @@ app.get('/game/:room', (_req, res) => {
 app.get('/join', (_req, res) => {
   res.sendFile(path.resolve(__dirname, 'join.html'));
 });
+app.get('/favicon.ico', (_req, res) => {
+  res.sendFile(path.resolve(__dirname, 'favicon.ico'));
+});
 
-app.get('/update/:room/:update', (req, res) => {
+app.get('/update/:room/:update', async (req, res) => {
   let updateEncoded;
   let room;
   try {
@@ -156,6 +171,7 @@ app.get('/update/:room/:update', (req, res) => {
     return;
   }
   const userUuid = getUuidGeneratingIfNotDefined(req.session);
+  await debugDelay();
   const result = tryApplyEncodedUpdate({ room, userUuid, updateEncoded });
   res.send(result);
 });

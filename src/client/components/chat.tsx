@@ -70,28 +70,29 @@ export class ChatComponent extends Component<Props, State> {
   }
 
   render(): ComponentChild {
-    return <div>
-      {
-        this.props.chat.map((message, key) => {
-          const maybeUserName = this.props.userNamesByUuid.get(message.userUuid);
-          const userName = maybeUserName === undefined ? 'unknown' : maybeUserName;
-          return <ChatMessageComponent
-            key={key}
-            userUuid={message.userUuid}
-            userName={userName}
-            text={message.text}
-            currentUser={this.props.currentUserUuid === message.userUuid}
-          />;
-        }).toJS()
-      }
-      <input
-        value={this.state.inputValue}
-        onInput={(event: InputChangeEvent) => this.updateInputValue(event)}
-        onKeyPress={(event: InputKeyPressEvent) => this.inputOnKeyPress(event)}
-      >
-      </input>
-      <input type='button' value='Send!' onClick={() => this.sendInputValue()}></input>
-
-      </div>;
+    return (
+      <div>
+        {
+          this.props.chat.map((message, key) => {
+            const maybeUserName = this.props.userNamesByUuid.get(message.userUuid);
+            const userName = maybeUserName === undefined ? 'unknown' : maybeUserName;
+            return <ChatMessageComponent
+              key={key}
+              userUuid={message.userUuid}
+              userName={userName}
+              text={message.text}
+              currentUser={this.props.currentUserUuid === message.userUuid}
+            />;
+          }).toJS()
+        }
+        <input
+          value={this.state.inputValue}
+          onInput={(event: InputChangeEvent) => this.updateInputValue(event)}
+          onKeyPress={(event: InputKeyPressEvent) => this.inputOnKeyPress(event)}
+        >
+        </input>
+        <input type='button' value='Send!' onClick={() => this.sendInputValue()}></input>
+      </div>
+    );
   }
 }

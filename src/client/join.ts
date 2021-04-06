@@ -10,7 +10,9 @@ window.onload = () => {
     || !(nameText instanceof HTMLInputElement)) {
     throw new Error('missing input elements');
   }
-  joinButton.addEventListener('click', async () => {
+  joinButton.disabled = false;
+  joinButton.value = 'Join';
+  const submit = async (): Promise<void> => {
     const code = codeText.value;
     const name = nameText.value;
     joinButton.disabled = true;
@@ -25,5 +27,17 @@ window.onload = () => {
       joinButton.disabled = false;
       joinButton.value = 'Join';
     }
-  });
+  };
+  const submitOnEnter = async (event: KeyboardEvent): Promise<void> => {
+    if (event.key === 'Enter') {
+      submit();
+    }
+  };
+  codeText.addEventListener('keypress', submitOnEnter);
+  nameText.addEventListener('keypress', submitOnEnter);
+  joinButton.addEventListener('click', submit);
+};
+
+window.onunload = () => {
+  // this is here so when navigating back to the join page causes the form to reset
 };
