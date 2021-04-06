@@ -3,6 +3,25 @@ import { PathReporter } from 'io-ts/lib/PathReporter';
 import * as u from '../common/update';
 import * as w from '../common/websocket_api';
 
+function parseResult(resultEncoded: any): either.Either<Error, 'Ok'> {
+  const result = u.UpdateResultT.decode(resultEncoded);
+  if (either.isRight(result)) {
+    if (either.isRight(result.right)) {
+      return either.right('Ok');
+    }
+    switch (result.right.left.tag) {
+      case 'DecodingFailed': {
+        return either.left(new Error('failed to decode update'));
+      }
+      case 'UpdateFailed': {
+        return either.left(new Error(`update failed (${result.right.left.reason})`));
+      }
+    }
+  } else {
+    return either.left(new Error(PathReporter.report(result).join('')));
+  }
+}
+
 export async function sendUpdateSocketIO(
   { socket, update }: { socket: SocketIOClient.Socket, update: u.Update }
 ): Promise<void> {
@@ -10,24 +29,11 @@ export async function sendUpdateSocketIO(
   const updateEncoded = u.UpdateT.encode(update);
   return new Promise((resolve, reject) => {
     socket.emit(w.Update, updateEncoded, (resultEncoded: any) => {
-      const result = u.UpdateResultT.decode(resultEncoded);
+      const result = parseResult(resultEncoded);
       if (either.isRight(result)) {
-        if (either.isRight(result.right)) {
-          resolve();
-        } else {
-          switch (result.right.left.tag) {
-            case 'DecodingFailed': {
-              reject(new Error(`failed to decode update: ${JSON.stringify(updateEncoded)}`));
-              break;
-            }
-            case 'UpdateFailed': {
-              reject(new Error(`update failed (${result.right.left.reason})`));
-              break;
-            }
-          }
-        }
+        resolve();
       } else {
-        reject(new Error(PathReporter.report(result).join('')));
+        reject(result.left);
       }
     });
   });
@@ -40,5 +46,8 @@ export async function sendUpdateSocketHttp(
   const updateEncoded = u.UpdateT.encode(update);
   const updateEscaped = encodeURIComponent(JSON.stringify(updateEncoded));
   const resultEncoded = await (await fetch(`/update/${room}/${updateEscaped}`)).json();
-  console.log(resultEncoded);
+  const result = parseResult(resultEncoded);
+  if (either.isLeft(result)) {
+    throw result.left;
+  }
 }
