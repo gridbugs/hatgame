@@ -1,7 +1,7 @@
 import * as i from 'immutable';
 import { either } from 'fp-ts';
 import {
-  UserUuid, UserNamesByUuid, ChatMessage, Chat
+  UserUuid, UserNamesByUuid, ChatMessage, Chat, CurrentUsers,
 } from '../common/types';
 import * as m from '../common/model';
 
@@ -37,6 +37,7 @@ export type GameStateOrLobby = { tag: 'Lobby', state: LobbyState } | { tag: 'Gam
 
 export type RoomStateObject = {
   userNamesByUuid: UserNamesByUuid,
+  currentUsers: CurrentUsers,
   chat: Chat,
   gameStateOrLobby: GameStateOrLobby,
 };
@@ -44,16 +45,20 @@ export type RoomStateObject = {
 export class RoomState {
   private readonly userNamesByUuid: UserNamesByUuid;
 
+  private readonly currentUsers: CurrentUsers;
+
   private readonly chat: Chat;
 
   private readonly gameStateOrLobby: GameStateOrLobby;
 
   private constructor({
     userNamesByUuid,
+    currentUsers,
     chat,
     gameStateOrLobby,
   } : RoomStateObject) {
     this.userNamesByUuid = userNamesByUuid;
+    this.currentUsers = currentUsers;
     this.chat = chat;
     this.gameStateOrLobby = gameStateOrLobby;
   }
@@ -61,6 +66,7 @@ export class RoomState {
   private toObject(): RoomStateObject {
     return {
       userNamesByUuid: this.userNamesByUuid,
+      currentUsers: this.currentUsers,
       chat: this.chat,
       gameStateOrLobby: this.gameStateOrLobby,
     };
@@ -68,6 +74,7 @@ export class RoomState {
 
   public static empty: RoomState = new RoomState({
     userNamesByUuid: i.Map(),
+    currentUsers: i.Set(),
     chat: i.List(),
     gameStateOrLobby: { tag: 'Lobby', state: { wordsByUserUuid: i.Map() } },
   });
@@ -89,6 +96,26 @@ export class RoomState {
         }));
       }
     }
+  }
+
+  public makeUserCurrent(userUuid: UserUuid): either.Either<'UserDoesNotExist', RoomState> {
+    if (!this.userNamesByUuid.has(userUuid)) {
+      return either.left('UserDoesNotExist');
+    }
+    return either.right(new RoomState({
+      ...this.toObject(),
+      currentUsers: this.currentUsers.add(userUuid),
+    }));
+  }
+
+  public makeUserNotCurrent(userUuid: UserUuid): either.Either<'UserDoesNotExist', RoomState> {
+    if (!this.userNamesByUuid.has(userUuid)) {
+      return either.left('UserDoesNotExist');
+    }
+    return either.right(new RoomState({
+      ...this.toObject(),
+      currentUsers: this.currentUsers.remove(userUuid),
+    }));
   }
 
   public addChatMessage(chatUpdate: ChatMessage): either.Either<'UserDoesNotExist', RoomState> {
@@ -128,7 +155,7 @@ export class RoomState {
     }
   }
 
-  public toModel(_currentUserUuid: UserUuid): m.Model {
+  public toModel(): m.Model {
     switch (this.gameStateOrLobby.tag) {
       case 'Game': {
         return {
@@ -144,6 +171,7 @@ export class RoomState {
           tag: 'Lobby',
           content: {
             userNamesByUuid: this.userNamesByUuid,
+            currentUsers: this.currentUsers,
             chat: this.chat,
           },
         };

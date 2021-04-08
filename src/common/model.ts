@@ -1,10 +1,11 @@
 import * as t from 'io-ts';
-import { ChatT, UserNamesByUuidT } from './types';
+import { ChatT, UserNamesByUuidT, CurrentUsersT } from './types';
 
 export * from '../common/types';
 
 export const LobbyT = t.type({
   userNamesByUuid: UserNamesByUuidT,
+  currentUsers: CurrentUsersT,
   chat: ChatT,
 });
 export type Lobby = t.TypeOf<typeof LobbyT>;

@@ -5,6 +5,7 @@ import {
   ComponentChild,
 } from 'preact';
 import { ChatComponent } from '../components/chat';
+import { UserListComponent } from '../components/user_list';
 import * as m from '../../common/model';
 import * as u from '../../common/update';
 
@@ -18,6 +19,13 @@ export class LobbyComponent extends Component<Props> {
   render(): ComponentChild {
     return <div>
       <h1>Lobby</h1>
+      <h2>Users</h2>
+      <UserListComponent
+        currentUserUuid={this.props.currentUserUuid}
+        userNamesByUuid={this.props.lobby.userNamesByUuid}
+        currentUsers={this.props.lobby.currentUsers}
+      />
+      <h2>Chat</h2>
       <ChatComponent
         currentUserUuid={this.props.currentUserUuid}
         chat={this.props.lobby.chat}

@@ -53,16 +53,19 @@ export function encodeUpdateForRoom(room: string, update: Update): any {
   return UpdateForRoomT.encode({ room, update });
 }
 
+export const UpdateFailedReasonT = t.union([
+  t.literal('GameIsInProgress'),
+  t.literal('NameAlreadyExists'),
+  t.literal('UserDoesNotExist'),
+  t.literal('WordAlreadyExists'),
+]);
+export type UpdateFailedReason = t.TypeOf<typeof UpdateFailedReasonT>;
+
 export const UpdateErrorT = t.union([
   t.type({ tag: t.literal('DecodingFailed') }),
   t.type({
     tag: t.literal('UpdateFailed'),
-    reason: t.union([
-      t.literal('GameIsInProgress'),
-      t.literal('NameAlreadyExists'),
-      t.literal('UserDoesNotExist'),
-      t.literal('WordAlreadyExists'),
-    ]),
+    reason: UpdateFailedReasonT,
   }),
 ]);
 export type UpdateError = t.TypeOf<typeof UpdateErrorT>;

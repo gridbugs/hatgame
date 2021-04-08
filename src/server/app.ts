@@ -9,6 +9,7 @@ import { either } from 'fp-ts';
 import * as u from '../common/update';
 import * as m from '../common/model';
 import { AppState } from './app_state';
+import { RoomState } from './room_state';
 import * as w from '../common/websocket_api';
 import { ModelUpdate } from '../common/model_update';
 import * as debug from './debug';
@@ -84,32 +85,40 @@ const session = expressSession({
 });
 const socketSession = sharedSession(session, { autoSave: true });
 
-function applyUpdate({
-  room, userUuid, update,
-}: { room: string, userUuid: m.UserUuid, update: u.Update }): u.UpdateResult {
-  const roomUpdateResult = appState.tryUpdateRoomState(room, (roomState) => {
-    switch (update.tag) {
-      case 'EnsureUserInRoomWithName': {
-        return roomState.ensureUserInRoomWithName(userUuid, update.content.name);
-      }
-      case 'AddChatMessage': {
-        return roomState.addChatMessage({ userUuid, text: update.content.text });
-      }
-      case 'AddWord': {
-        return roomState.addWord(userUuid, update.content.word);
-      }
-    }
-  });
+function updateRoomState({
+  room, f,
+}: { room: string, f: (s: RoomState) => either.Either<u.UpdateFailedReason, RoomState> }): u.UpdateResult {
+  const roomUpdateResult = appState.tryUpdateRoomState(room, f);
   if (either.isRight(roomUpdateResult)) {
-    console.log(`applied update to [${room}] from [${userUuid}]: ${JSON.stringify(update)}`);
     const { appState: newAppState, roomState } = roomUpdateResult.right;
     appState = newAppState;
-    const model = m.ModelT.encode(roomState.toModel(userUuid));
+    const model = m.ModelT.encode(roomState.toModel());
     console.log(ModelUpdate, JSON.stringify(model));
     io.use(socketSession).to(`/room/${room}`).emit(ModelUpdate, model);
     return u.UpdateResultOk;
   }
   return either.left({ tag: 'UpdateFailed', reason: roomUpdateResult.left });
+}
+
+function applyUpdate({
+  room, userUuid, update,
+}: { room: string, userUuid: m.UserUuid, update: u.Update }): u.UpdateResult {
+  return updateRoomState({
+    room,
+    f: (roomState) => {
+      switch (update.tag) {
+        case 'EnsureUserInRoomWithName': {
+          return roomState.ensureUserInRoomWithName(userUuid, update.content.name);
+        }
+        case 'AddChatMessage': {
+          return roomState.addChatMessage({ userUuid, text: update.content.text });
+        }
+        case 'AddWord': {
+          return roomState.addWord(userUuid, update.content.word);
+        }
+      }
+    }
+  });
 }
 
 function tryApplyEncodedUpdate({
@@ -136,12 +145,20 @@ io.use(socketSession).on('connection', (socket: socketIo.Socket) => {
     socket.on(w.GetModel, async (callback) => {
       await debugDelay();
       const state = appState.getRoomState(room);
-      callback(m.ModelT.encode(state.toModel(userUuid)));
+      callback(m.ModelT.encode(state.toModel()));
     });
     socket.on(w.Update, async (updateEncoded: any, callback) => {
       await debugDelay();
       const result = tryApplyEncodedUpdate({ room, userUuid, updateEncoded });
       callback(result);
+    });
+    socket.on('disconnect', (_reason) => updateRoomState({
+      room,
+      f: (roomState) => roomState.makeUserNotCurrent(userUuid)
+    }));
+    updateRoomState({
+      room,
+      f: (roomState) => roomState.makeUserCurrent(userUuid)
     });
   }
 });
@@ -155,6 +172,9 @@ app.get('/game/:room', (_req, res) => {
 });
 app.get('/join', (_req, res) => {
   res.sendFile(path.resolve(__dirname, 'join.html'));
+});
+app.get('/', (_req, res) => {
+  res.sendFile(path.resolve(__dirname, 'index.html'));
 });
 app.get('/favicon.ico', (_req, res) => {
   res.sendFile(path.resolve(__dirname, 'favicon.ico'));
