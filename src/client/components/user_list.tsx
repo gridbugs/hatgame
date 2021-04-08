@@ -13,11 +13,19 @@ type Props = {
 };
 
 export class UserListComponent extends Component<Props> {
-  renderUser(userName: string, isCurrentUser: boolean): ComponentChild {
-    if (isCurrentUser) {
-      return <span><em>{userName}</em></span>;
+  renderUser(userUuid: string, userName: string): ComponentChild {
+    const comments = [];
+    if (userUuid === this.props.currentUserUuid) {
+      comments.push('you');
     }
-    return <span>{userName}</span>;
+    if (!this.props.currentUsers.has(userUuid)) {
+      comments.push('disconnected');
+    }
+    if (comments.length === 0) {
+      return userName;
+    }
+    const commentsString = comments.map((c) => `(${c})`).join(', ');
+    return `${userName} ${commentsString}`;
   }
 
   render(): ComponentChild {
@@ -26,9 +34,8 @@ export class UserListComponent extends Component<Props> {
         <ul>
         {
           this.props.userNamesByUuid
-            .filter((_name, userUuid) => this.props.currentUsers.has(userUuid))
             .map((userName, userUuid) => <li key={userUuid}>{
-              this.renderUser(userName, userUuid === this.props.currentUserUuid)}</li>).toList().toJS()
+              this.renderUser(userUuid, userName)}</li>).toList().toJS()
         }
         </ul>
       </div>

@@ -59,7 +59,7 @@ export class JoinComponent extends Component<Props, State> {
     try {
       await sendUpdateSocketHttp({
         room: this.state.inputValueRoomName,
-        update: u.mkEnsureUserInRoomWithName({ name: this.state.inputValueYourName }),
+        update: u.mkEnsureUserInRoomWithName({ name: this.state.inputValueYourName, makeCurrent: true }),
       });
       window.location.href = `/game/${this.state.inputValueRoomName}`;
     } catch {

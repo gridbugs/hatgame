@@ -79,7 +79,9 @@ export class RoomState {
     gameStateOrLobby: { tag: 'Lobby', state: { wordsByUserUuid: i.Map() } },
   });
 
-  public ensureUserInRoomWithName(userUuid: UserUuid, name: string):
+  public ensureUserInRoomWithName({
+    userUuid, name, makeCurrent,
+  }: {userUuid: UserUuid, name: string, makeCurrent: boolean}):
     either.Either<'GameIsInProgress' | 'NameAlreadyExists', RoomState> {
     switch (this.gameStateOrLobby.tag) {
       case 'Game': return either.left('GameIsInProgress');
@@ -93,6 +95,7 @@ export class RoomState {
         return either.right(new RoomState({
           ...this.toObject(),
           userNamesByUuid,
+          currentUsers: makeCurrent ? this.currentUsers.add(userUuid) : this.currentUsers,
         }));
       }
     }

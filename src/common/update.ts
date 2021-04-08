@@ -4,6 +4,7 @@ import { either as mkEitherT } from 'io-ts-types/lib/either';
 
 export const EnsureUserInRoomWithNameT = t.type({
   name: t.string,
+  makeCurrent: t.boolean,
 });
 export type EnsureUserInRoomWithName = t.TypeOf<typeof EnsureUserInRoomWithNameT>;
 
@@ -33,8 +34,11 @@ export const UpdateT = t.union([
 ]);
 export type Update = t.TypeOf<typeof UpdateT>;
 
-export function mkEnsureUserInRoomWithName({ name }: { name: string }): Update {
-  return { tag: 'EnsureUserInRoomWithName', content: { name } };
+export function mkEnsureUserInRoomWithName({
+  name,
+  makeCurrent,
+}: { name: string, makeCurrent: boolean }): Update {
+  return { tag: 'EnsureUserInRoomWithName', content: { name, makeCurrent } };
 }
 export function mkAddChatMessage({ text }: { text: string }): Update {
   return { tag: 'AddChatMessage', content: { text } };

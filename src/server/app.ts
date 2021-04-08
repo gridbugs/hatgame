@@ -108,7 +108,11 @@ function applyUpdate({
     f: (roomState) => {
       switch (update.tag) {
         case 'EnsureUserInRoomWithName': {
-          return roomState.ensureUserInRoomWithName(userUuid, update.content.name);
+          return roomState.ensureUserInRoomWithName({
+            userUuid,
+            name: update.content.name,
+            makeCurrent: update.content.makeCurrent,
+          });
         }
         case 'AddChatMessage': {
           return roomState.addChatMessage({ userUuid, text: update.content.text });
@@ -169,9 +173,6 @@ app.use('/static', express.static(__dirname));
 
 app.get('/game/:room', (_req, res) => {
   res.sendFile(path.resolve(__dirname, 'game.html'));
-});
-app.get('/join', (_req, res) => {
-  res.sendFile(path.resolve(__dirname, 'join.html'));
 });
 app.get('/', (_req, res) => {
   res.sendFile(path.resolve(__dirname, 'index.html'));
