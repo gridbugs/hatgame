@@ -33,6 +33,9 @@ export const UpdateT = t.union([
     tag: t.literal('SetWords'),
     content: SetWordsT,
   }),
+  t.type({
+    tag: t.literal('StartGame'),
+  }),
 ]);
 export type Update = t.TypeOf<typeof UpdateT>;
 

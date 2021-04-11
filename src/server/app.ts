@@ -125,6 +125,9 @@ function applyUpdate({
         case 'SetWords': {
           return roomState.setWords(userUuid, update.content.words);
         }
+        case 'StartGame': {
+          return roomState.startGame();
+        }
       }
     }
   });

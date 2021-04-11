@@ -17,6 +17,10 @@ type Props = {
 };
 
 export class LobbyComponent extends Component<Props> {
+  async startGame(): Promise<void> {
+    await this.props.sendUpdate({ tag: 'StartGame' });
+  }
+
   render(): ComponentChild {
     return <div>
       <h1>Lobby</h1>
@@ -40,7 +44,11 @@ export class LobbyComponent extends Component<Props> {
         submittedWords={this.props.lobby.submittedWords}
         sendUpdate={this.props.sendUpdate}
       />
-
+      <input
+        type='button'
+        value='Start Game!'
+        onClick={() => this.startGame()}
+      />
     </div>;
   }
 }

@@ -149,6 +149,30 @@ export class RoomState {
     }
   }
 
+  public startGame(): either.Either<'GameIsInProgress', RoomState> {
+    switch (this.gameStateOrLobby.tag) {
+      case 'Game': return either.left('GameIsInProgress');
+      case 'Lobby': {
+        return either.right(new RoomState({
+          ...this.toObject(),
+          gameStateOrLobby: {
+            tag: 'Game',
+            state: {
+              teams: i.List(),
+              currentTurn: {
+                teamIndexWithinTeams: 0,
+                clueGiverIndexWithinTeam: 0,
+              },
+              wordBag: i.List(),
+              incorrectlyGuessedWordBag: i.List(),
+              correctlyGuessedWordsByUserUuid: i.Map(),
+            }
+          }
+        }));
+      }
+    }
+  }
+
   public toModel(userUuid: UserUuid): m.Model {
     switch (this.gameStateOrLobby.tag) {
       case 'Game': {
