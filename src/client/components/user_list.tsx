@@ -4,12 +4,13 @@ import {
   Component,
   ComponentChild,
 } from 'preact';
-import { UserNamesByUuid, CurrentUsers } from '../../common/types';
+import { UserNamesByUuid, CurrentUsers, NumSubmittedWordsByUserUuid } from '../../common/types';
 
 type Props = {
   currentUserUuid: string,
   userNamesByUuid: UserNamesByUuid,
   currentUsers: CurrentUsers,
+  numSubmittedWordsByUserUuid: NumSubmittedWordsByUserUuid,
 };
 
 export class UserListComponent extends Component<Props> {
@@ -20,6 +21,10 @@ export class UserListComponent extends Component<Props> {
     }
     if (!this.props.currentUsers.has(userUuid)) {
       comments.push('disconnected');
+    }
+    const numSubmittedWords = this.props.numSubmittedWordsByUserUuid.get(userUuid);
+    if (numSubmittedWords !== undefined) {
+      comments.push(`words: ${numSubmittedWords}`);
     }
     if (comments.length === 0) {
       return userName;

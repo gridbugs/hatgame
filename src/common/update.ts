@@ -1,6 +1,8 @@
 import * as t from 'io-ts';
 import { either } from 'fp-ts';
 import { either as mkEitherT } from 'io-ts-types/lib/either';
+import * as i from 'immutable';
+import * as ti from 'io-ts-immutable';
 
 export const EnsureUserInRoomWithNameT = t.type({
   name: t.string,
@@ -13,10 +15,10 @@ export const AddChatMessageT = t.type({
 });
 export type AddChatMessage = t.TypeOf<typeof AddChatMessageT>;
 
-export const AddWordT = t.type({
-  word: t.string,
+export const SetWordsT = t.type({
+  words: ti.list(t.string),
 });
-export type AddWord = t.TypeOf<typeof AddWordT>;
+export type SetWords = t.TypeOf<typeof SetWordsT>;
 
 export const UpdateT = t.union([
   t.type({
@@ -28,8 +30,8 @@ export const UpdateT = t.union([
     content: AddChatMessageT,
   }),
   t.type({
-    tag: t.literal('AddWord'),
-    content: AddWordT,
+    tag: t.literal('SetWords'),
+    content: SetWordsT,
   }),
 ]);
 export type Update = t.TypeOf<typeof UpdateT>;
@@ -43,8 +45,8 @@ export function mkEnsureUserInRoomWithName({
 export function mkAddChatMessage({ text }: { text: string }): Update {
   return { tag: 'AddChatMessage', content: { text } };
 }
-export function mkAddWord({ word }: { word: string }): Update {
-  return { tag: 'AddWord', content: { word } };
+export function mkSetWords({ words }: { words: i.List<string> }): Update {
+  return { tag: 'SetWords', content: { words } };
 }
 
 export const UpdateForRoomT = t.type({

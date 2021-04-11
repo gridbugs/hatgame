@@ -45,9 +45,16 @@ export class AppComponent extends Component<Props, State> {
     });
   }
 
+  renderLoading(): ComponentChild {
+    return <div>reticulating splines...</div>;
+  }
+
   render(): ComponentChild {
+    if (this.state.currentUserUuid === '') {
+      return this.renderLoading();
+    }
     switch (this.state.model.tag) {
-      case 'Null': return <div>reticulating splines...</div>;
+      case 'Null': return this.renderLoading();
       case 'Game': return <GameComponent
         currentUserUuid={this.state.currentUserUuid}
         game={this.state.model.content}

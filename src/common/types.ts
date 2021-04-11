@@ -30,3 +30,15 @@ export type UserNamesByUuid = t.TypeOf<typeof UserNamesByUuidT>;
 
 export const CurrentUsersT = ti.set(UserUuidT);
 export type CurrentUsers = t.TypeOf<typeof CurrentUsersT>;
+
+export const WordT = t.string;
+export type Word = t.TypeOf<typeof WordT>;
+
+export const WordListT = ti.list(WordT);
+export type WordList = t.TypeOf<typeof WordListT>;
+
+export const WordBagT = ti.list(WordT);
+export type WordBag = t.TypeOf<typeof WordBagT>;
+
+export const NumSubmittedWordsByUserUuidT = ti.map(UserUuidT, t.number);
+export type NumSubmittedWordsByUserUuid = t.TypeOf<typeof NumSubmittedWordsByUserUuidT>;

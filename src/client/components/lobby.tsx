@@ -6,6 +6,7 @@ import {
 } from 'preact';
 import { ChatComponent } from '../components/chat';
 import { UserListComponent } from '../components/user_list';
+import { SubmitWordsComponent } from '../components/submit_words';
 import * as m from '../../common/model';
 import * as u from '../../common/update';
 
@@ -24,6 +25,7 @@ export class LobbyComponent extends Component<Props> {
         currentUserUuid={this.props.currentUserUuid}
         userNamesByUuid={this.props.lobby.userNamesByUuid}
         currentUsers={this.props.lobby.currentUsers}
+        numSubmittedWordsByUserUuid={this.props.lobby.numSubmittedWordsByUserUuid}
       />
       <h2>Chat</h2>
       <ChatComponent
@@ -32,6 +34,13 @@ export class LobbyComponent extends Component<Props> {
         userNamesByUuid={this.props.lobby.userNamesByUuid}
         sendChatMessage={(text) => this.props.sendUpdate(u.mkAddChatMessage({ text }))}
       />
+      <h2>Submit Words</h2>
+      <SubmitWordsComponent
+        numWords={3}
+        submittedWords={this.props.lobby.submittedWords}
+        sendUpdate={this.props.sendUpdate}
+      />
+
     </div>;
   }
 }

@@ -9,7 +9,7 @@ import { either } from 'fp-ts';
 import * as u from '../common/update';
 import * as m from '../common/model';
 import { AppState } from './app_state';
-import { RoomState } from './room_state';
+import { RoomState, UserUuid } from './room_state';
 import * as w from '../common/websocket_api';
 import { ModelUpdate } from '../common/model_update';
 import * as debug from './debug';
@@ -86,13 +86,17 @@ const session = expressSession({
 const socketSession = sharedSession(session, { autoSave: true });
 
 function updateRoomState({
-  room, f,
-}: { room: string, f: (s: RoomState) => either.Either<u.UpdateFailedReason, RoomState> }): u.UpdateResult {
+  room, userUuid, f,
+}: {
+  room: string,
+  userUuid: UserUuid,
+  f: (s: RoomState) => either.Either<u.UpdateFailedReason, RoomState>
+}): u.UpdateResult {
   const roomUpdateResult = appState.tryUpdateRoomState(room, f);
   if (either.isRight(roomUpdateResult)) {
     const { appState: newAppState, roomState } = roomUpdateResult.right;
     appState = newAppState;
-    const model = m.ModelT.encode(roomState.toModel());
+    const model = m.ModelT.encode(roomState.toModel(userUuid));
     console.log(ModelUpdate, JSON.stringify(model));
     io.use(socketSession).to(`/room/${room}`).emit(ModelUpdate, model);
     return u.UpdateResultOk;
@@ -105,6 +109,7 @@ function applyUpdate({
 }: { room: string, userUuid: m.UserUuid, update: u.Update }): u.UpdateResult {
   return updateRoomState({
     room,
+    userUuid,
     f: (roomState) => {
       switch (update.tag) {
         case 'EnsureUserInRoomWithName': {
@@ -117,8 +122,8 @@ function applyUpdate({
         case 'AddChatMessage': {
           return roomState.addChatMessage({ userUuid, text: update.content.text });
         }
-        case 'AddWord': {
-          return roomState.addWord(userUuid, update.content.word);
+        case 'SetWords': {
+          return roomState.setWords(userUuid, update.content.words);
         }
       }
     }
@@ -149,7 +154,7 @@ io.use(socketSession).on('connection', (socket: socketIo.Socket) => {
     socket.on(w.GetModel, async (callback) => {
       await debugDelay();
       const state = appState.getRoomState(room);
-      callback(m.ModelT.encode(state.toModel()));
+      callback(m.ModelT.encode(state.toModel(userUuid)));
     });
     socket.on(w.Update, async (updateEncoded: any, callback) => {
       await debugDelay();
@@ -158,10 +163,12 @@ io.use(socketSession).on('connection', (socket: socketIo.Socket) => {
     });
     socket.on('disconnect', (_reason) => updateRoomState({
       room,
+      userUuid,
       f: (roomState) => roomState.makeUserNotCurrent(userUuid)
     }));
     updateRoomState({
       room,
+      userUuid,
       f: (roomState) => roomState.makeUserCurrent(userUuid)
     });
   }

@@ -1,7 +1,7 @@
 import * as i from 'immutable';
 import { either } from 'fp-ts';
 import {
-  UserUuid, UserNamesByUuid, ChatMessage, Chat, CurrentUsers,
+  UserUuid, UserNamesByUuid, ChatMessage, Chat, CurrentUsers, WordBag, Word, WordList
 } from '../common/types';
 import * as m from '../common/model';
 
@@ -14,10 +14,6 @@ export type Turn = {
   readonly clueGiverIndexWithinTeam: number,
 };
 
-export type Word = string;
-
-export type WordBag = i.List<Word>;
-
 export type GameState = {
   readonly teams: i.List<Team>,
   readonly currentTurn: Turn,
@@ -26,8 +22,7 @@ export type GameState = {
   readonly correctlyGuessedWordsByUserUuid: i.Map<UserUuid, i.List<Word>>,
 };
 
-export type WordsByUserUuid = i.Map<UserUuid, i.Set<Word>>;
-const WordSetEmpty = i.Set();
+export type WordsByUserUuid = i.Map<UserUuid, WordList>;
 
 export type LobbyState = {
   readonly wordsByUserUuid: WordsByUserUuid,
@@ -131,17 +126,13 @@ export class RoomState {
     }));
   }
 
-  public addWord(userUuid: UserUuid, word: Word):
-    either.Either<'GameIsInProgress' | 'UserDoesNotExist' | 'WordAlreadyExists', RoomState> {
+  public setWords(userUuid: UserUuid, words: i.List<Word>):
+    either.Either<'GameIsInProgress' | 'UserDoesNotExist', RoomState> {
     switch (this.gameStateOrLobby.tag) {
       case 'Game': return either.left('GameIsInProgress');
       case 'Lobby': {
         if (!this.userNamesByUuid.has(userUuid)) {
           return either.left('UserDoesNotExist');
-        }
-        const userWords = this.gameStateOrLobby.state.wordsByUserUuid.get(userUuid, WordSetEmpty);
-        if (userWords.has(word)) {
-          return either.left('WordAlreadyExists');
         }
         return either.right(new RoomState({
           ...this.toObject(),
@@ -149,7 +140,7 @@ export class RoomState {
             tag: 'Lobby',
             state: {
               wordsByUserUuid: this.gameStateOrLobby.state.wordsByUserUuid.set(
-                userUuid, userWords.add(word)
+                userUuid, words
               ),
             },
           },
@@ -158,7 +149,7 @@ export class RoomState {
     }
   }
 
-  public toModel(): m.Model {
+  public toModel(userUuid: UserUuid): m.Model {
     switch (this.gameStateOrLobby.tag) {
       case 'Game': {
         return {
@@ -176,6 +167,8 @@ export class RoomState {
             userNamesByUuid: this.userNamesByUuid,
             currentUsers: this.currentUsers,
             chat: this.chat,
+            numSubmittedWordsByUserUuid: this.gameStateOrLobby.state.wordsByUserUuid.map((w) => w.size),
+            submittedWords: this.gameStateOrLobby.state.wordsByUserUuid.get(userUuid, i.List()),
           },
         };
       }
