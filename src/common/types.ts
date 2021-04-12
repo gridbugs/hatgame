@@ -42,3 +42,12 @@ export type WordBag = t.TypeOf<typeof WordBagT>;
 
 export const NumSubmittedWordsByUserUuidT = ti.map(UserUuidT, t.number);
 export type NumSubmittedWordsByUserUuid = t.TypeOf<typeof NumSubmittedWordsByUserUuidT>;
+
+export const TeamT = ti.list(UserUuidT);
+export type Team = t.TypeOf<typeof TeamT>;
+
+export const TurnT = t.type({
+  teamIndexWithinTeams: t.number,
+  clueGiverIndexWithinTeam: t.number,
+});
+export type Turn = t.TypeOf<typeof TurnT>;

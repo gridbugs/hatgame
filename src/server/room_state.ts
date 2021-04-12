@@ -1,18 +1,13 @@
 import * as i from 'immutable';
 import { either } from 'fp-ts';
 import {
-  UserUuid, UserNamesByUuid, ChatMessage, Chat, CurrentUsers, WordBag, Word, WordList
+  UserUuid, UserNamesByUuid, ChatMessage, Chat, CurrentUsers, WordBag, Word, WordList, Team, Turn,
 } from '../common/types';
 import * as m from '../common/model';
+import { XorShiftRng } from './xor_shift_rng';
+import { shuffleList } from './xor_shift_rng_immutable';
 
 export * from '../common/types';
-
-export type Team = i.List<UserUuid>;
-
-export type Turn = {
-  readonly teamIndexWithinTeams: number,
-  readonly clueGiverIndexWithinTeam: number,
-};
 
 export type GameState = {
   readonly teams: i.List<Team>,
@@ -35,6 +30,7 @@ export type RoomStateObject = {
   currentUsers: CurrentUsers,
   chat: Chat,
   gameStateOrLobby: GameStateOrLobby,
+  rng: XorShiftRng,
 };
 
 export class RoomState {
@@ -46,16 +42,20 @@ export class RoomState {
 
   private readonly gameStateOrLobby: GameStateOrLobby;
 
+  private rng: XorShiftRng;
+
   private constructor({
     userNamesByUuid,
     currentUsers,
     chat,
     gameStateOrLobby,
+    rng,
   } : RoomStateObject) {
     this.userNamesByUuid = userNamesByUuid;
     this.currentUsers = currentUsers;
     this.chat = chat;
     this.gameStateOrLobby = gameStateOrLobby;
+    this.rng = rng;
   }
 
   private toObject(): RoomStateObject {
@@ -64,6 +64,7 @@ export class RoomState {
       currentUsers: this.currentUsers,
       chat: this.chat,
       gameStateOrLobby: this.gameStateOrLobby,
+      rng: this.rng,
     };
   }
 
@@ -72,6 +73,7 @@ export class RoomState {
     currentUsers: i.Set(),
     chat: i.List(),
     gameStateOrLobby: { tag: 'Lobby', state: { wordsByUserUuid: i.Map() } },
+    rng: XorShiftRng.withRandomSeed(),
   });
 
   public ensureUserInRoomWithName({
@@ -153,6 +155,7 @@ export class RoomState {
     switch (this.gameStateOrLobby.tag) {
       case 'Game': return either.left('GameIsInProgress');
       case 'Lobby': {
+        const [rng, _shuffledUsers] = shuffleList(this.rng, this.currentUsers.toList());
         return either.right(new RoomState({
           ...this.toObject(),
           gameStateOrLobby: {
@@ -167,7 +170,8 @@ export class RoomState {
               incorrectlyGuessedWordBag: i.List(),
               correctlyGuessedWordsByUserUuid: i.Map(),
             }
-          }
+          },
+          rng,
         }));
       }
     }
