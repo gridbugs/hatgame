@@ -21,7 +21,7 @@ export class AppState {
 
   public tryUpdateRoomState<L>(name: string, f: (s: RoomState) => either.Either<L, RoomState>):
     either.Either<L, RoomUpdate> {
-    const current = this.roomsByName.get(name, RoomState.empty);
+    const current = this.roomsByName.get(name, RoomState.empty());
     const result = f(current);
     if (either.isLeft(result)) {
       return either.left(result.left);
@@ -35,6 +35,6 @@ export class AppState {
   }
 
   public getRoomState(name: string): RoomState {
-    return this.roomsByName.get(name, RoomState.empty);
+    return this.roomsByName.get(name, RoomState.empty());
   }
 }

@@ -67,6 +67,7 @@ export const UpdateFailedReasonT = t.union([
   t.literal('NameAlreadyExists'),
   t.literal('UserDoesNotExist'),
   t.literal('WordAlreadyExists'),
+  t.literal('NotEnoughPlayers'),
 ]);
 export type UpdateFailedReason = t.TypeOf<typeof UpdateFailedReasonT>;
 

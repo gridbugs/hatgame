@@ -46,6 +46,9 @@ export type NumSubmittedWordsByUserUuid = t.TypeOf<typeof NumSubmittedWordsByUse
 export const TeamT = ti.list(UserUuidT);
 export type Team = t.TypeOf<typeof TeamT>;
 
+export const TeamsT = ti.list(TeamT);
+export type Teams = t.TypeOf<typeof TeamsT>;
+
 export const TurnT = t.type({
   teamIndexWithinTeams: t.number,
   clueGiverIndexWithinTeam: t.number,

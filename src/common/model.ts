@@ -1,9 +1,9 @@
 import * as t from 'io-ts';
 import {
-  ChatT, UserNamesByUuidT, CurrentUsersT, NumSubmittedWordsByUserUuidT, WordListT
+  ChatT, UserNamesByUuidT, CurrentUsersT, NumSubmittedWordsByUserUuidT, WordListT, TeamsT,
 } from './types';
 
-export * from '../common/types';
+export * from './types';
 
 export const LobbyT = t.type({
   userNamesByUuid: UserNamesByUuidT,
@@ -17,6 +17,7 @@ export type Lobby = t.TypeOf<typeof LobbyT>;
 export const GameT = t.type({
   userNamesByUuid: UserNamesByUuidT,
   chat: ChatT,
+  teams: TeamsT,
 });
 export type Game = t.TypeOf<typeof GameT>;
 

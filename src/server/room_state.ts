@@ -1,7 +1,7 @@
 import * as i from 'immutable';
 import { either } from 'fp-ts';
 import {
-  UserUuid, UserNamesByUuid, ChatMessage, Chat, CurrentUsers, WordBag, Word, WordList, Team, Turn,
+  UserUuid, UserNamesByUuid, ChatMessage, Chat, CurrentUsers, WordBag, Word, WordList, Teams, Turn,
 } from '../common/types';
 import * as m from '../common/model';
 import { XorShiftRng } from './xor_shift_rng';
@@ -10,7 +10,7 @@ import { shuffleList } from './xor_shift_rng_immutable';
 export * from '../common/types';
 
 export type GameState = {
-  readonly teams: i.List<Team>,
+  readonly teams: Teams,
   readonly currentTurn: Turn,
   readonly wordBag: WordBag,
   readonly incorrectlyGuessedWordBag: WordBag,
@@ -68,13 +68,17 @@ export class RoomState {
     };
   }
 
-  public static empty: RoomState = new RoomState({
-    userNamesByUuid: i.Map(),
-    currentUsers: i.Set(),
-    chat: i.List(),
-    gameStateOrLobby: { tag: 'Lobby', state: { wordsByUserUuid: i.Map() } },
-    rng: XorShiftRng.withRandomSeed(),
-  });
+  public static empty(): RoomState {
+    const rng = XorShiftRng.withRandomSeed();
+    console.log(`RNG Seed: ${rng.getState()}`);
+    return new RoomState({
+      userNamesByUuid: i.Map(),
+      currentUsers: i.Set(),
+      chat: i.List(),
+      gameStateOrLobby: { tag: 'Lobby', state: { wordsByUserUuid: i.Map() } },
+      rng: XorShiftRng.withRandomSeed(),
+    });
+  }
 
   public ensureUserInRoomWithName({
     userUuid, name, makeCurrent,
@@ -151,27 +155,46 @@ export class RoomState {
     }
   }
 
-  public startGame(): either.Either<'GameIsInProgress', RoomState> {
+  private static usersToTeams(users: i.List<UserUuid>): Teams {
+    if (users.size > 3) {
+      return RoomState.usersToTeams(users.skip(2)).push(users.take(2));
+    }
+    return i.List([users]);
+  }
+
+  private static allWords(wordsByUserUuid: WordsByUserUuid): i.List<Word> {
+    return i.List(wordsByUserUuid.values()).flatten().toList();
+  }
+
+  public startGame(): either.Either<'GameIsInProgress' | 'NotEnoughPlayers', RoomState> {
     switch (this.gameStateOrLobby.tag) {
       case 'Game': return either.left('GameIsInProgress');
       case 'Lobby': {
-        const [rng, _shuffledUsers] = shuffleList(this.rng, this.currentUsers.toList());
+        const users = this.currentUsers.toList();
+        if (users.size < 2) {
+          return either.left('NotEnoughPlayers');
+        }
+        const [rng1, shuffledUsers] = shuffleList(this.rng, users);
+        console.log('shuffled users', JSON.stringify(shuffledUsers));
+        const teams = RoomState.usersToTeams(shuffledUsers);
+        const [rng2, wordBag] = shuffleList(rng1, RoomState.allWords(this.gameStateOrLobby.state.wordsByUserUuid));
+        console.log('shuffled words', JSON.stringify(wordBag));
         return either.right(new RoomState({
           ...this.toObject(),
           gameStateOrLobby: {
             tag: 'Game',
             state: {
-              teams: i.List(),
+              teams,
               currentTurn: {
                 teamIndexWithinTeams: 0,
                 clueGiverIndexWithinTeam: 0,
               },
-              wordBag: i.List(),
+              wordBag,
               incorrectlyGuessedWordBag: i.List(),
               correctlyGuessedWordsByUserUuid: i.Map(),
             }
           },
-          rng,
+          rng: rng2,
         }));
       }
     }
@@ -185,6 +208,7 @@ export class RoomState {
           content: {
             userNamesByUuid: this.userNamesByUuid,
             chat: this.chat,
+            teams: this.gameStateOrLobby.state.teams,
           },
         };
       }

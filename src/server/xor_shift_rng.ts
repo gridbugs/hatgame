@@ -36,12 +36,16 @@ export class XorShiftRng {
     return [new XorShiftRng(x), x];
   }
 
+  public getState(): number {
+    return this.state;
+  }
+
   private static shuffleInPlace<T>(rng: XorShiftRng, data: T[]): XorShiftRng {
     let tmpRng = rng;
-    for (let i = 0; i < data.length - 1; i += 1) {
+    for (let i = data.length - 1; i >= 1; i -= 1) {
       const [nextRng, num] = rng.gen();
       tmpRng = nextRng;
-      const index = (num % (data.length - i)) + i;
+      const index = (num % (i + 1));
       const tmp = data[index];
       // eslint-disable-next-line no-param-reassign
       data[index] = data[i];
