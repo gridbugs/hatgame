@@ -4,6 +4,7 @@ import {
   ComponentChild,
   Component,
 } from 'preact';
+import { option } from 'fp-ts';
 import { LobbyComponent } from '../components/lobby';
 import { GameComponent } from '../components/game';
 import * as m from '../../common/model';
@@ -26,6 +27,8 @@ type Props = {
 type State = {
   currentUserUuid: m.UserUuid,
   model: m.Model,
+  error: option.Option<string>,
+
 };
 
 export class AppComponent extends Component<Props, State> {
@@ -34,12 +37,18 @@ export class AppComponent extends Component<Props, State> {
     this.setState({
       model: m.ModelNull,
       currentUserUuid: '',
+      error: option.none,
     });
     this.props.serverConnection.connect({
       onInit: ({ currentUserUuid, model }) => {
         this.setState({ currentUserUuid, model });
       },
       onModelUpdate: (model) => {
+        if (this.state.model.tag !== model.tag) {
+          this.setState({
+            error: option.none,
+          });
+        }
         this.setState({ model });
       }
     });
@@ -49,7 +58,22 @@ export class AppComponent extends Component<Props, State> {
     return <div>reticulating splines...</div>;
   }
 
-  render(): ComponentChild {
+  async sendUpdate(update: u.Update): Promise<void> {
+    try {
+      await this.props.serverConnection.sendUpdate(update);
+      this.setState({
+        error: option.none,
+      });
+    } catch (e: any) {
+      if (e instanceof Error) {
+        this.setState({
+          error: option.some(e.message),
+        });
+      }
+    }
+  }
+
+  renderMain(): ComponentChild {
     if (this.state.currentUserUuid === '') {
       return this.renderLoading();
     }
@@ -58,13 +82,27 @@ export class AppComponent extends Component<Props, State> {
       case 'Game': return <GameComponent
         currentUserUuid={this.state.currentUserUuid}
         game={this.state.model.content}
-        sendUpdate={this.props.serverConnection.sendUpdate}
+        sendUpdate={(update) => this.sendUpdate(update)}
       />;
       case 'Lobby': return <LobbyComponent
         currentUserUuid={this.state.currentUserUuid}
         lobby={this.state.model.content}
-        sendUpdate={this.props.serverConnection.sendUpdate}
+        sendUpdate={(update) => this.sendUpdate(update)}
       />;
     }
+  }
+
+  renderError(): ComponentChild {
+    if (option.isSome(this.state.error)) {
+      return <div>{this.state.error.value}</div>;
+    }
+    return <div></div>;
+  }
+
+  render(): ComponentChild {
+    return <div>
+      {this.renderError()}
+      {this.renderMain()}
+    </div>;
   }
 }
